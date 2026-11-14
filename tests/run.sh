@@ -44,3 +44,14 @@ if find "$ROOT" -path "$ROOT/build" -prune -o \( -name '*.icns' -o -name '*.car'
     echo "FAIL Dia assets found in the repository"; exit 1
 fi
 pass "no Dia binaries or artwork in the repository"
+
+# 5. Optional: the browser classes src/ looks up by name exist in the installed Dia.
+# Reads its binaries' strings only; skipped where there is no Dia (CI).
+if [ -d /Applications/Dia.app ]; then
+    if ! "$ROOT/scripts/check-classes.sh" /Applications/Dia.app > "$WORK/classes.txt"; then
+        grep -v '^OK' "$WORK/classes.txt"; echo "FAIL classes missing in /Applications/Dia.app"; exit 1
+    fi
+    pass "Dia classes present ($(tail -1 "$WORK/classes.txt"))"
+else
+    echo "skip Dia class check (no /Applications/Dia.app)"
+fi
