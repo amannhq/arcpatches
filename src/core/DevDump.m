@@ -82,6 +82,9 @@ static void dumpActiveTab(void) {
         }
         free(ms);
     }
+    NSWindow *key = NSApp.keyWindow;
+    [out appendFormat:@"key window: %@\nlive URL (Copy URL, captured): %@\nTweakURLForWindow: %@\n",
+        key ? @"yes" : @"none", key ? TweakLiveURLForPinnedTab(key) : nil, key ? TweakURLForWindow(key) : nil];
     NSString *dir = [NSHomeDirectory() stringByAppendingPathComponent:@"Library/Application Support/arcpatches"];
     [out writeToFile:[dir stringByAppendingPathComponent:@"tab.txt"] atomically:YES encoding:NSUTF8StringEncoding error:nil];
 }

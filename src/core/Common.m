@@ -1,4 +1,5 @@
 #import "Common.h"
+#import "Browser.h"
 #import <objc/runtime.h>
 
 NSNotificationName const TweakSettingsDidChangeNotification = @"TweakSettingsDidChangeNotification";
@@ -113,11 +114,25 @@ id TweakActiveTabForWindow(NSWindow *window) {
     return nil;
 }
 
+// The active tab's URL as scripting reports it: cheap, for display. A pinned tab reports
+// its saved URL here; actions use TweakLiveURLForWindow.
 NSString *TweakURLForWindow(NSWindow *window) {
     @try {
-        id u = [TweakActiveTabForWindow(window) valueForKey:@"URL"];
-        return [u isKindOfClass:NSString.class] ? u : nil;
+        id tab = TweakActiveTabForWindow(window);
+        id u = [tab valueForKey:@"URL"];
+        if (![u isKindOfClass:NSString.class]) return nil;
+        return u;
     } @catch (__unused NSException *e) { return nil; }
+}
+
+// For actions on the page (⌘L, copy, drag, site controls): a pinned tab's live URL.
+NSString *TweakLiveURLForWindow(NSWindow *window) {
+    NSString *u = TweakURLForWindow(window);
+    @try {
+        if (u && [[TweakActiveTabForWindow(window) valueForKey:kDiaTabPinnedKey] boolValue])
+            return TweakLiveURLForPinnedTab(window) ?: u;
+    } @catch (__unused NSException *e) {}
+    return u;
 }
 
 // "host" or "host:port" from the start of a scheme-less address, and its port ("" if none).

@@ -112,13 +112,13 @@ NSString *TweakSidebarEncodedOrigin(NSString *url) {
 }
 
 void TweakSidebarOpenDiaSiteControls(NSWindow *window) {
-    NSString *u = TweakURLForWindow(window);
+    NSString *u = TweakLiveURLForWindow(window);
     if (!TweakSidebarURLIsSite(u)) { NSBeep(); return; }
     if (pressDiaSiteControls(window)) return;
     TweakOpenInNewTab(window, [kDiaSiteDetailsURLPrefix stringByAppendingString:TweakSidebarEncodedOrigin(u)]);
 }
 
 void TweakSidebarOpenSiteControls(NSView *anchor) {
-    if (!TweakSidebarURLIsSite(TweakURLForWindow(anchor.window))) { NSBeep(); return; }
+    if (!TweakSidebarURLIsSite(TweakLiveURLForWindow(anchor.window))) { NSBeep(); return; }
     TweakSiteControlsToggle(anchor);
 }

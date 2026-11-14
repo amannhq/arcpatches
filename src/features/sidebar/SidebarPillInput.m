@@ -99,7 +99,7 @@ BOOL TweakSidebarShowCopiedFeedback(NSWindow *window) {
 }
 
 - (void)dragLinkWithEvent:(NSEvent *)e {
-    NSString *u = TweakURLForWindow(self.window), *url = u.length ? TweakCleanURL(u) : nil;
+    NSString *u = TweakLiveURLForWindow(self.window), *url = u.length ? TweakCleanURL(u) : nil;
     if (!url.length) return;
     NSPasteboardItem *item = [NSPasteboardItem new];
     if ([NSURL URLWithString:url]) [item setString:url forType:NSPasteboardTypeURL];

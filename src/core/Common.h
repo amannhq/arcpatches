@@ -67,6 +67,8 @@ IMP TweakHook(Class cls, SEL sel, IMP imp);
 
 // Dia scripting bridge: the active tab object for a window (DiaAppleScriptTab), or nil.
 id TweakActiveTabForWindow(NSWindow *window);
+NSString *TweakLiveURLForWindow(NSWindow *window);      // as TweakURLForWindow, but a pinned tab's live page
+NSString *TweakLiveURLForPinnedTab(NSWindow *window);   // LiveURL.m: Dia's Copy URL, captured privately
 NSString *TweakURLForWindow(NSWindow *window);
 void TweakNavigateWindow(NSWindow *window, NSString *url);  // url is final; typed text goes through TweakResolveInput first
 void TweakOpenInNewTab(NSWindow *window, NSString *url);

@@ -44,7 +44,7 @@ BOOL TweakPaletteOpen(NSWindow *window) {
 
     gPaletteWindow = window;
     gPaletteOpenedAt = NSDate.timeIntervalSinceReferenceDate;
-    gActiveURLAtOpen = TweakURLForWindow(window);
+    gActiveURLAtOpen = TweakLiveURLForWindow(window);
     // Start empty, like a new tab (Dia pre-fills the current URL).
     dispatch_async(dispatch_get_main_queue(), ^{
         id fr = window.firstResponder;

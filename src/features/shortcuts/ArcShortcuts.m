@@ -64,7 +64,7 @@ static void showToast(NSWindow *w, NSString *message) {
 #pragma mark - Actions
 
 BOOL TweakCopyPageLink(NSWindow *w, BOOL markdown) {
-    NSString *url = TweakURLForWindow(w), *title = nil;
+    NSString *url = TweakLiveURLForWindow(w), *title = nil;
     if (!url.length || [url isEqualToString:@"about:blank"]) return NO;
     url = TweakCleanURL(url);
     NSPasteboard *pb = NSPasteboard.generalPasteboard;

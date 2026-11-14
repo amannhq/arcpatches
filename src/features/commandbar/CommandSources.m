@@ -43,7 +43,7 @@ NSString *TweakShortcutString(NSMenuItem *item) {
     _tabs = [self loadTabs];
     _bookmarks = [self loadBookmarks];
     _searchTemplate = [self loadSearchTemplate];
-    _activeURL = TweakURLForWindow(window);
+    _activeURL = TweakLiveURLForWindow(window);
     [_icons removeAllObjects];   // drop remembered misses: sites may have icons by now
     [TweakCommandSources learnSiteIcons];
 }

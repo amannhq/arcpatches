@@ -126,7 +126,7 @@ static NSMenuItem *screenshotItem(NSMenu *menu, int depth) {
 - (void)showFrom:(NSView *)anchor {
     self.anchor = anchor;
     self.browserWindow = anchor.window;
-    self.url = TweakURLForWindow(anchor.window);
+    self.url = TweakLiveURLForWindow(anchor.window);
     __weak typeof(self) weakSelf = self;
     self.extensions = TweakSiteExtensions(^(NSArray *list) {
         TweakSiteControls *me = weakSelf;

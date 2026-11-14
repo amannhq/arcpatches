@@ -87,7 +87,7 @@
 
     NSString *initial = @"";
     if (mode == TweakCommandBarCurrentTab) {
-        NSString *u = TweakURLForWindow(window);
+        NSString *u = TweakLiveURLForWindow(window);
         if (u.length && ![u hasPrefix:@"dia://"]) initial = u;
     }
     self.field.stringValue = initial;
