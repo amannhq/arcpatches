@@ -19,6 +19,8 @@ static const void *kToggleKey = &kToggleKey;
 static const void *kInsetKey = &kInsetKey;
 static const void *kHidByUsKey = &kHidByUsKey;
 static const void *kExitingKey = &kExitingKey;
+static const void *kRehideKey = &kRehideKey;   // @[start, count] of recent re-hides
+static const void *kGaveUpKey = &kGaveUpKey;
 
 static void (*origHeaderLayout)(id, SEL);
 static NSSize (*origButtonsSize)(id, SEL);
@@ -82,10 +84,27 @@ static NSSize hookedButtonsSize(NSView *self, SEL _cmd) {
     return s;
 }
 
+// Dia re-showing the buttons on every pass would make hiding them a layout loop across
+// passes: after a few re-hides within a second, leave that view to Dia.
+static BOOL gaveUp(NSView *buttons) {
+    if (!hidByUs(buttons)) return NO;   // first hide, or Dia hid them meanwhile
+    NSArray *s = objc_getAssociatedObject(buttons, kRehideKey) ?: @[@0, @0];
+    NSTimeInterval now = NSDate.timeIntervalSinceReferenceDate, start = [s[0] doubleValue];
+    NSInteger count = now - start < 1 ? [s[1] integerValue] + 1 : 1;
+    objc_setAssociatedObject(buttons, kRehideKey, @[@(count == 1 ? now : start), @(count)], OBJC_ASSOCIATION_RETAIN);
+    if (count <= 5) return NO;
+    NSLog(@"[arcpatches] Dia keeps showing the window buttons in full screen; leaving them");
+    objc_setAssociatedObject(buttons, kGaveUpKey, @YES, OBJC_ASSOCIATION_RETAIN);
+    objc_setAssociatedObject(buttons, kHidByUsKey, nil, OBJC_ASSOCIATION_RETAIN);
+    [buttons invalidateIntrinsicContentSize];
+    return YES;
+}
+
 // Hides only buttons Dia shows, and restores only what it hid: Dia hides them itself
 // in some states and must keep doing so.
 static void applyWindowButtons(NSView *buttons, BOOL hide) {
-    if (hide && !buttons.hidden) {
+    if (hide && objc_getAssociatedObject(buttons, kGaveUpKey)) return;
+    if (hide && !buttons.hidden && !gaveUp(buttons)) {
         objc_setAssociatedObject(buttons, kHidByUsKey, @YES, OBJC_ASSOCIATION_RETAIN);
         buttons.hidden = YES;
         [buttons invalidateIntrinsicContentSize];
@@ -96,7 +115,10 @@ static void applyWindowButtons(NSView *buttons, BOOL hide) {
             logged = YES;
             NSLog(@"[arcpatches] window buttons aren't in a stack view that detaches hidden views; relying on zero width");
         }
-    } else if (!hide && hidByUs(buttons)) {
+    }
+    if (hide) return;
+    objc_setAssociatedObject(buttons, kGaveUpKey, nil, OBJC_ASSOCIATION_RETAIN);   // next full screen tries again
+    if (hidByUs(buttons)) {
         objc_setAssociatedObject(buttons, kHidByUsKey, nil, OBJC_ASSOCIATION_RETAIN);
         buttons.hidden = NO;
         [buttons invalidateIntrinsicContentSize];
