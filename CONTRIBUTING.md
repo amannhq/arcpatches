@@ -54,7 +54,8 @@ There are two ways to load your build. Pick one.
 
 - **Quit Dia first.** "Dia Arc" is a separate app, but it uses the **same profile** as Dia (Dia names its profile folder after `CFBundleName`, which the copy keeps). Two apps on one profile at once can corrupt it.
 - This is not what users get. The ArcPatches app patches `/Applications/Dia.app` **in place** by default and keeps no second copy. Test the in-place path too (below) before you open a PR that touches the installer.
-- `build.sh` copies whatever is at `/Applications/Dia.app`. If ArcPatches has already patched it in place, restore the original first (ArcPatches ▸ **Restore**, or `ArcPatches.app/Contents/MacOS/ArcPatches --restore`), or the copy gets two patches.
+- `build.sh` copies whatever is at `/Applications/Dia.app`. If ArcPatches has already patched it in place, the copy starts from that patched build rather than stock Dia (your dylib replaces ArcPatches' one). For a clean baseline, restore the original first (ArcPatches ▸ **Restore**, or `ArcPatches.app/Contents/MacOS/ArcPatches --restore`).
+- `~/Applications/Dia Arc.app` is also where ArcPatches' optional copy mode keeps its copy. If you use copy mode, `build.sh` overwrites it and ArcPatches will rebuild it over your build. Don't mix the two.
 - Delete `~/Applications/Dia Arc.app` when you're done. Its Sparkle updates are off, so it goes stale.
 
 **In place, the way users run it.** Build the ArcPatches app with your dylib inside, then let it patch Dia:
