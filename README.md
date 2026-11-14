@@ -1,6 +1,6 @@
 # ArcPatches
 
-Arc's look and workflow, patched into Chromium browsers on macOS. Dia is supported today, and more browsers are planned.
+Arc's look and workflow, patched into Chromium browsers on macOS. Dia gets every feature; Ardia gets the Chromium performance switches only. See [docs/browsers.md](docs/browsers.md) for what works where, and why.
 
 Apple silicon · macOS 14+ · unofficial and not affiliated with The Browser Company.
 
@@ -63,6 +63,7 @@ Notes:
 | --- | --- |
 | `src/core/` | The injected dylib's browser-agnostic runtime: entry point, feature registry, hook helpers, settings, health, passkey handoff |
 | `src/browsers/dia/` | The Dia descriptor: bundle id, app path, profile folder, and the names of Dia's classes the features hook |
+| `src/browsers/ardia/`, `src/browsers/chrome/` | The other browsers ArcPatches recognises ([support matrix](docs/browsers.md)) |
 | `src/features/` | One folder per feature (`sidebar`, `commandbar`, `privacy`, `performance`, `shortcuts`, `tabs`, `preferences`), each declaring the browsers it supports |
 | `installer/` | The ArcPatches menu bar app: patch engine, UI, background job, self-updater |
 | `tools/` | `insert-dylib`, release signing, and dev probes / self-tests |

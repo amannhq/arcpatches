@@ -3,6 +3,7 @@
 #import "Common.h"
 #import "Features.h"
 #import "Browser.h"
+#import "Browsers.h"
 #include <stdlib.h>
 
 // In install order.
@@ -12,11 +13,15 @@ static const TweakFeature *const kFeatures[] = {
 };
 static const size_t kFeatureCount = sizeof kFeatures / sizeof kFeatures[0];
 
-// The browsers this build knows (src/browsers/<id>/), by bundle id. Dia Arc keeps Dia's.
+// The browsers this build knows (Browsers.m), by bundle id. Dia Arc keeps Dia's.
 static NSString *detectBrowser(void) {
-    NSDictionary<NSString *, NSString *> *known = @{kDiaBundleID: kDiaBrowserID};
-    NSString *bundleId = NSBundle.mainBundle.bundleIdentifier;
-    return bundleId ? known[bundleId] : nil;
+    return TweakBrowserIdForBundleId(NSBundle.mainBundle.bundleIdentifier);
+}
+
+static BOOL anyFeatureActive(void) {
+    for (size_t i = 0; i < kFeatureCount; i++)
+        if (TweakFeatureActive(kFeatures[i])) return YES;
+    return NO;
 }
 
 static void installKeyMonitor(void) {
@@ -48,8 +53,9 @@ static void installKeyMonitor(void) {
 // The app menu shows "Dia Arc". CFBundleName stays "Dia" (it names the profile folder),
 // so the title is set here instead.
 static void showPatchedName(void) {
+    NSString *title = [TweakBrowserDisplayName(TweakRunningBrowser()) stringByAppendingString:@" \u2726"];
     NSMenu *appMenu = NSApp.mainMenu.itemArray.firstObject.submenu;
-    if (appMenu && ![appMenu.title isEqualToString:@"Dia \u2726"]) appMenu.title = @"Dia \u2726";
+    if (appMenu && ![appMenu.title isEqualToString:title]) appMenu.title = title;
 }
 
 __attribute__((constructor)) static void init(void) {
@@ -58,6 +64,7 @@ __attribute__((constructor)) static void init(void) {
     NSString *browser = detectBrowser();
     if (!browser) { NSLog(@"[arcpatches] %@ is not a supported browser; nothing installed", NSBundle.mainBundle.bundleIdentifier); return; }
     TweakSetRunningBrowser(browser);
+    if (!anyFeatureActive()) { NSLog(@"[arcpatches] no feature supports %@ yet; nothing installed", browser); return; }
     // Privacy's URLSession hooks must exist before the browser creates its sessions;
     // Tabs must see its browsers and tabs as they're created.
     for (size_t i = 0; i < kFeatureCount; i++)
@@ -67,7 +74,7 @@ __attribute__((constructor)) static void init(void) {
             if (kFeatures[i]->install && TweakFeatureActive(kFeatures[i])) kFeatures[i]->install();
         installKeyMonitor();
         showPatchedName();
-        TweakHandoffInstall();
+        if ([browser isEqualToString:kDiaBrowserID]) TweakHandoffInstall();   // the companion's handoff opens Dia only
         [NSNotificationCenter.defaultCenter addObserverForName:NSApplicationDidBecomeActiveNotification object:nil queue:nil
                                                     usingBlock:^(NSNotification *n) { showPatchedName(); }];
         NSLog(@"[arcpatches] installed");

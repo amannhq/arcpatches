@@ -1,82 +1,6 @@
 // ArcPatches's state and actions, shared by the menu bar item and the window.
 import AppKit
 
-enum MenuBarMode: String, CaseIterable, Identifiable {
-    case always, whenNeeded, never
-    var id: String { rawValue }
-    var title: String {
-        switch self {
-        case .always: return "Always"
-        case .whenNeeded: return "When Needed"
-        case .never: return "Never"
-        }
-    }
-}
-
-struct Health {
-    var checks: [(name: String, ok: Bool)]
-    var diaVersion: String
-    var date: String
-    var failures: Int { checks.filter { !$0.ok }.count }
-
-    static var url: URL {
-        FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/arcpatches/health.json")
-    }
-
-    static func load() -> Health? {
-        guard let d = try? Data(contentsOf: url),
-              let j = try? JSONSerialization.jsonObject(with: d) as? [String: Any],
-              let c = j["checks"] as? [String: Any] else { return nil }
-        let checks = c.map { (name: $0.key, ok: ($0.value as? NSNumber)?.boolValue ?? false) }.sorted { $0.name < $1.name }
-        return Health(checks: checks, diaVersion: j["diaVersion"] as? String ?? "?", date: j["date"] as? String ?? "")
-    }
-}
-
-enum Prefs {
-    static let d = UserDefaults.standard
-    static var autoRepatch: Bool {
-        get { d.object(forKey: "autoRepatch") as? Bool ?? true }
-        set { d.set(newValue, forKey: "autoRepatch") }
-    }
-    static var menuBarMode: MenuBarMode {
-        get { MenuBarMode(rawValue: d.string(forKey: "menuBarMode") ?? "") ?? .whenNeeded }
-        set { d.set(newValue.rawValue, forKey: "menuBarMode") }
-    }
-    static var autoUpdateSelf: Bool {
-        get { d.object(forKey: "autoUpdateSelf") as? Bool ?? true }
-        set { d.set(newValue, forKey: "autoUpdateSelf") }
-    }
-    static var lastSelfUpdateCheck: Double {
-        get { d.double(forKey: "lastSelfUpdateCheck") }
-        set { d.set(newValue, forKey: "lastSelfUpdateCheck") }
-    }
-    /// Newer ArcPatches version seen on GitHub and not installed yet (for attention).
-    static var availableSelfVersion: String? {
-        get { d.string(forKey: "availableSelfVersion").flatMap { SelfUpdater.isNewer($0, than: SelfUpdater.currentVersion) ? $0 : nil } }
-        set { d.set(newValue, forKey: "availableSelfVersion") }
-    }
-    /// A broken-feature report the user has seen and dismissed (by its date).
-    static var dismissedHealthDate: String? {
-        get { d.string(forKey: "dismissedHealthDate") }
-        set { d.set(newValue, forKey: "dismissedHealthDate") }
-    }
-}
-
-/// Why ArcPatches wants the user's attention, if at all. Shared with the background job.
-func attentionReason(status: PatchStatus, lastError: String?, health: Health?) -> String? {
-    if let e = lastError { return e }
-    if let h = health, h.failures > 0, h.date != Prefs.dismissedHealthDate {
-        return "\(h.failures) feature\(h.failures == 1 ? "" : "s") stopped working"
-    }
-    if case .needsPatch = status.state, PatchEngine.patchedIsRunning || !Prefs.autoRepatch {
-        return "Quit \(PatchEngine.targetName) to finish patching"
-    }
-    if let v = Prefs.availableSelfVersion, !Prefs.autoUpdateSelf {
-        return "ArcPatches \(v) is available"
-    }
-    return nil
-}
-
 @MainActor
 final class Controller: ObservableObject {
     let engine = PatchEngine(resources: Bundle.main.resourceURL!)
@@ -97,6 +21,9 @@ final class Controller: ObservableObject {
     @Published var menuBarMode = Prefs.menuBarMode { didSet { applyMode() } }
     /// Patch /Applications/Dia.app itself (default) rather than a separate copy.
     var patchInPlace: Bool { PatchEngine.mode == .inPlace }
+    /// The browser being patched (Dia unless another is picked) and its name, for messages.
+    @Published private(set) var browser = PatchEngine.browser
+    var browserName: String { browser.name }
 
     /// Called whenever anything changes (status item refresh).
     var onChange: (() -> Void)?
@@ -112,10 +39,10 @@ final class Controller: ObservableObject {
     var statusLine: String {
         switch status.state {
         case .checking: return "Checking…"
-        case .diaMissing: return "Dia isn't installed in /Applications"
-        case .notInstalled: return patchInPlace ? "Dia isn't patched yet" : "Not built yet"
-        case .restored: return "Original Dia restored — patch to use \(PatchEngine.appName)"
-        case .upToDate: return "Patched for Dia \(status.diaVersion ?? "")"
+        case .diaMissing: return "\(browserName) isn't installed in /Applications"
+        case .notInstalled: return patchInPlace ? "\(browserName) isn't patched yet" : "Not built yet"
+        case .restored: return "Original \(browserName) restored — patch to use \(PatchEngine.appName)"
+        case .upToDate: return "Patched for \(browserName) \(status.diaVersion ?? "")"
         case .needsPatch(let why): return "Needs patching: \(why)" + (pendingRepatch ? " — waiting for \(PatchEngine.targetName) to quit" : "")
         }
     }
@@ -123,6 +50,7 @@ final class Controller: ObservableObject {
     /// `status()` runs codesign (~0.3 s): compute it off the main thread, in order, then publish it.
     private let statusQueue = DispatchQueue(label: "dev.amannhq.arcpatches.status")
     func refresh(then: (@MainActor () -> Void)? = nil) {
+        if browser != PatchEngine.browser { browser = PatchEngine.browser }   // e.g. `ArcPatches --browser` meanwhile
         health = Health.load()
         let engine = self.engine
         statusQueue.async {
@@ -152,6 +80,21 @@ final class Controller: ObservableObject {
         onChange?()
     }
 
+    // MARK: Browser
+
+    /// Switches which browser ArcPatches patches. The one it leaves stays as it is
+    /// (patched or not); its settings, backup and health report are kept for later.
+    func selectBrowser(_ b: BrowserTarget) {
+        guard busy == nil, b != browser else { return }
+        BrowserTarget.selected = b
+        browser = b
+        lastError = nil
+        updateHint = nil
+        pendingRepatch = false
+        if BackgroundAgent.isInstalled { BackgroundAgent.install() }   // watch the new browser's Info.plist
+        tick()
+    }
+
     // MARK: Automation
 
     func tick() {
@@ -166,7 +109,7 @@ final class Controller: ObservableObject {
         }
     }
 
-    /// Dia updates itself. In place, Dia Arc keeps Dia's own updater; this is the fallback:
+    /// The browser updates itself. In place, Dia Arc keeps Dia's own updater; this is the fallback:
     /// put the original Dia back, open it to update, and re-patch once it quits.
     /// In copy mode: open the regular Dia; ArcPatches re-patches from the new version.
     @Published private(set) var updateHint: String?
@@ -177,33 +120,34 @@ final class Controller: ObservableObject {
             updateHint = "Quit \(PatchEngine.targetName) first" + (patchInPlace ? "." : " — both share one profile.")
             return
         }
-        updateHint = "In Dia, choose Dia ▸ Check for Updates. Quit Dia when it's done; ArcPatches re-patches automatically."
+        let n = browserName
+        updateHint = "In \(n), choose \(n) ▸ Check for Updates. Quit \(n) when it's done; ArcPatches re-patches automatically."
         guard patchInPlace else {
             NSWorkspace.shared.openApplication(at: PatchEngine.source, configuration: .init())
             return
         }
-        run("Restoring the original Dia…", { try $0.restoreOriginal(); PatchEngine.restoredByUser = false }) { ok in
+        run("Restoring the original \(n)…", { try $0.restoreOriginal(); PatchEngine.restoredByUser = false }) { ok in
             guard ok else { return }
             self.pendingRepatch = true
             NSWorkspace.shared.openApplication(at: PatchEngine.source, configuration: .init())
         }
     }
 
-    /// Puts the untouched Dia back; ArcPatches leaves it alone until Patch is clicked.
+    /// Puts the untouched browser back; ArcPatches leaves it alone until Patch is clicked.
     func restoreOriginal() {
-        if PatchEngine.diaIsRunning { lastError = "Quit Dia first."; refresh(); return }
-        run("Restoring the original Dia…", { try $0.restoreOriginal() }) { _ in }
+        if PatchEngine.diaIsRunning { lastError = "Quit \(browserName) first."; refresh(); return }
+        run("Restoring the original \(browserName)…", { try $0.restoreOriginal() }) { _ in }
     }
 
     func setPatchInPlace(_ on: Bool) {
         let mode: PatchMode = on ? .inPlace : .copy
         guard mode != PatchEngine.mode else { return }
         if PatchEngine.diaIsRunning || PatchEngine.isRunning(PatchEngine.copyDestination) {
-            lastError = "Quit Dia first, then switch."
+            lastError = "Quit \(browserName) first, then switch."
             refresh()
             return
         }
-        run(on ? "Patching Dia directly…" : "Restoring Dia and building \(PatchEngine.appName)…", { try $0.switchMode(to: mode) }) { _ in }
+        run(on ? "Patching \(browserName) directly…" : "Restoring \(browserName) and building \(PatchEngine.appName)…", { try $0.switchMode(to: mode) }) { _ in }
     }
 
     /// Runs an engine job off the main thread, showing `label` while it works.
@@ -246,14 +190,14 @@ final class Controller: ObservableObject {
                 switch result {
                 case .success:
                     self.lastError = nil
-                    if auto { notifyUser("\(PatchEngine.appName) is ready", "\(reason) — patched for Dia \(PatchEngine.version(PatchEngine.source) ?? "").") }
+                    if auto { notifyUser("\(PatchEngine.appName) is ready", "\(reason) — patched for \(PatchEngine.browser.name) \(PatchEngine.version(PatchEngine.source) ?? "").") }
                 case .failure(PatchError.busy):
                     break
                 case .failure(PatchError.patchedRunning):
-                    self.pendingRepatch = true   // Dia started meanwhile: patch once it quits
+                    self.pendingRepatch = true   // the browser started meanwhile: patch once it quits
                 case .failure(let e):
                     self.lastError = e.localizedDescription
-                    notifyUser("Couldn't patch Dia", e.localizedDescription)
+                    notifyUser("Couldn't patch \(PatchEngine.browser.name)", e.localizedDescription)
                 }
                 self.refresh()
             }

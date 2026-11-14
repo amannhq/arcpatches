@@ -16,10 +16,14 @@ final class Handoff: ObservableObject {
     /// Called when the handoff ends (so ArcPatches can quit if it has nothing else to do).
     var onFinish: (() -> Void)?
 
+    /// Only Dia Arc offers the handoff, so this is always about Dia, whichever browser
+    /// ArcPatches currently patches.
+    private static let dia = BrowserTarget.dia
+
     /// The untouched, Dia-signed app: the backup when Dia itself is patched, the
     /// regular Dia in copy mode.
     static var originalApp: URL? {
-        let url = PatchEngine.mode == .inPlace ? PatchEngine.backup : PatchEngine.source
+        let url = dia.mode == .inPlace ? dia.backup : dia.source
         guard FileManager.default.fileExists(atPath: url.path), !PatchEngine.isPatched(url) else { return nil }
         return url
     }
@@ -34,8 +38,8 @@ final class Handoff: ObservableObject {
         Task {
             // Dia Arc is quitting. Chromium locks the profile until it has fully exited;
             // if it doesn't quit (e.g. the link came from somewhere else), do nothing.
-            for _ in 0..<150 where PatchEngine.patchedIsRunning { try? await Task.sleep(nanoseconds: 200_000_000) }
-            guard !PatchEngine.patchedIsRunning else { finish(reopen: false); return }
+            for _ in 0..<150 where Self.dia.patchedIsRunning { try? await Task.sleep(nanoseconds: 200_000_000) }
+            guard !Self.dia.patchedIsRunning else { finish(reopen: false); return }
             do {
                 let cfg = NSWorkspace.OpenConfiguration()
                 cfg.activates = true
@@ -71,7 +75,7 @@ final class Handoff: ObservableObject {
         Task {
             if reopen {
                 try? await Task.sleep(nanoseconds: 500_000_000)   // let the profile lock go
-                _ = try? await NSWorkspace.shared.openApplication(at: PatchEngine.destination, configuration: .init())
+                _ = try? await NSWorkspace.shared.openApplication(at: Self.dia.destination, configuration: .init())
             }
             isActive = false
             onFinish?()
@@ -109,7 +113,7 @@ private struct HandoffPanelView: View {
                 Text("Original Dia is open for passkeys").font(.system(size: 13, weight: .semibold))
                 Text("Sign in, then go back.").font(.system(size: 11)).foregroundStyle(.secondary)
             }
-            Button("Back to \(PatchEngine.appName)", action: back)
+            Button("Back to \(BrowserTarget.dia.appName)", action: back)
                 .keyboardShortcut(.defaultAction)
                 .controlSize(.regular)
         }
