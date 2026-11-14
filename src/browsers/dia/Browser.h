@@ -23,6 +23,8 @@ extern NSString *const kDiaGesturalContentClass;         // the pane's web conte
 extern NSString *const kDiaInfoBarClass;
 extern NSString *const kDiaWebContentsHostClass;
 extern NSString *const kDiaFlippedViewClass;             // ARCUI's generic container
+extern NSString *const kDiaWindowStandardButtonsClass;   // the traffic lights in the sidebar header
+extern NSString *const kDiaToggleSidebarAction;          // selector of Dia's Hide/Show Sidebar menu item
 
 #pragma mark - Top navigation bar
 

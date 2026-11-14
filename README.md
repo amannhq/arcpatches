@@ -8,6 +8,7 @@ Apple silicon · macOS 14+ · unofficial and not affiliated with The Browser Com
 
 **Sidebar like Arc**
 - URL pill at the top of the sidebar, with back, forward and reload next to the window buttons
+- Sidebar toggle after the window buttons; in full screen the window buttons go away and the row starts with the toggle
 - No top toolbar: pages fill the window, and you can show the toolbar by hovering the top edge
 - `⌃⌘U` switches between the browser's own toolbar and the sidebar URL bar
 
@@ -63,7 +64,7 @@ Notes:
 | --- | --- |
 | `src/core/` | The injected dylib's browser-agnostic runtime: entry point, feature registry, hook helpers, settings, health, passkey handoff |
 | `src/browsers/dia/` | The Dia descriptor: bundle id, app path, profile folder, and the names of Dia's classes the features hook |
-| `src/features/` | One folder per feature (`sidebar`, `commandbar`, `privacy`, `performance`, `shortcuts`, `tabs`, `preferences`), each declaring the browsers it supports |
+| `src/features/` | One folder per feature (`sidebar`, `toprow`, `commandbar`, `privacy`, `performance`, `shortcuts`, `tabs`, `preferences`), each declaring the browsers it supports |
 | `installer/` | The ArcPatches menu bar app: patch engine, UI, background job, self-updater |
 | `tools/` | `insert-dylib`, release signing, and dev probes / self-tests |
 | `tests/` | Tests that run without a browser |

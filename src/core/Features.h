@@ -22,3 +22,4 @@ extern const TweakFeature TweakFeatureSidebar;
 extern const TweakFeature TweakFeaturePreferences;
 extern const TweakFeature TweakFeatureCommandBar;
 extern const TweakFeature TweakFeatureShortcuts;
+extern const TweakFeature TweakFeatureTopRow;

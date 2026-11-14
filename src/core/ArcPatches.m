@@ -9,6 +9,7 @@
 static const TweakFeature *const kFeatures[] = {
     &TweakFeaturePrivacy, &TweakFeaturePerformance, &TweakFeatureTabs,
     &TweakFeatureSidebar, &TweakFeaturePreferences, &TweakFeatureCommandBar, &TweakFeatureShortcuts,
+    &TweakFeatureTopRow,
 };
 static const size_t kFeatureCount = sizeof kFeatures / sizeof kFeatures[0];
 
