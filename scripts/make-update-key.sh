@@ -1,0 +1,23 @@
+#!/bin/bash
+# One-time setup for signed ArcPatches updates.
+#  - Generates an ed25519 key pair.
+#  - Writes the public key to companion/update-public-key.txt (commit this; it's built into ArcPatches).
+#  - Keeps the private key outside the repo, and prints how to store it as a GitHub secret
+#    so the release workflow can sign ArcPatches.zip.
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+KEY_DIR="$HOME/.config/arcpatches"
+PRIVATE="$KEY_DIR/update-private-key"
+PUBLIC="$ROOT/companion/update-public-key.txt"
+
+mkdir -p "$KEY_DIR"
+chmod 700 "$KEY_DIR"
+PUB="$(swift "$ROOT/tools/update-key.swift" generate "$PRIVATE")"   # fails before touching $PUBLIC
+printf '%s\n' "$PUB" > "$PUBLIC"
+
+echo "Public key:  $PUBLIC (commit it)"
+echo "Private key: $PRIVATE (keep it secret; back it up somewhere safe)"
+echo
+echo "Store the private key for GitHub Actions:"
+echo "  gh secret set ARCPATCHES_UPDATE_PRIVATE_KEY --repo amannhq/arcpatches < \"$PRIVATE\""

@@ -1,0 +1,44 @@
+name: Bug report
+description: Something in ArcPatches or a patched browser doesn't work
+labels: ["bug"]
+body:
+  - type: dropdown
+    id: browser
+    attributes:
+      label: Browser
+      options: [Dia, Arc, Other]
+    validations: { required: true }
+  - type: input
+    id: browser-version
+    attributes:
+      label: Browser version
+      placeholder: "Dia 1.57.1"
+    validations: { required: true }
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version
+      placeholder: "26.1"
+    validations: { required: true }
+  - type: input
+    id: arcpatches
+    attributes:
+      label: ArcPatches version
+      description: Shown in the ArcPatches app, or `cat VERSION` for a source build.
+    validations: { required: true }
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, what you saw instead.
+    validations: { required: true }
+  - type: textarea
+    id: proof
+    attributes:
+      label: Screenshot or recording
+  - type: textarea
+    id: health
+    attributes:
+      label: Feature health
+      description: Copy the health list from the ArcPatches app, if anything is marked as not working.
+      render: text

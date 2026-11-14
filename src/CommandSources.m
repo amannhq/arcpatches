@@ -1,0 +1,508 @@
+#import "CommandSources.h"
+#import "Common.h"
+#include <sqlite3.h>
+
+@implementation TweakItem
+@end
+
+// The last-used profile's folder (Local State → profile.last_used), else Default.
+static NSString *profileDir(void) {
+    NSString *root = [NSHomeDirectory() stringByAppendingPathComponent:@"Library/Application Support/Dia/User Data"];
+    NSData *data = [NSData dataWithContentsOfFile:[root stringByAppendingPathComponent:@"Local State"]];
+    id state = data ? [NSJSONSerialization JSONObjectWithData:data options:0 error:nil] : nil;
+    id profile = [state isKindOfClass:NSDictionary.class] ? state[@"profile"] : nil;
+    id last = [profile isKindOfClass:NSDictionary.class] ? profile[@"last_used"] : nil;
+    BOOL isDir = NO;
+    if ([last isKindOfClass:NSString.class] && [last length] && ![last hasPrefix:@"."] && ![last containsString:@"/"] &&
+        [NSFileManager.defaultManager fileExistsAtPath:[root stringByAppendingPathComponent:last] isDirectory:&isDir] && isDir)
+        return [root stringByAppendingPathComponent:last];
+    return [root stringByAppendingPathComponent:@"Default"];
+}
+
+#pragma mark - Matching
+
+// Scores how well `query` matches an item: every word must appear in the title or
+// URL; word-prefix and host-prefix hits count more than mid-word hits.
+static double matchScore(NSArray<NSString *> *words, NSString *title, NSString *url) {
+    NSString *t = title.lowercaseString ?: @"";
+    NSString *u = url.lowercaseString ?: @"";
+    NSString *host = [NSURL URLWithString:url].host.lowercaseString ?: @"";
+    if ([host hasPrefix:@"www."]) host = [host substringFromIndex:4];
+    double score = 0;
+    for (NSString *w in words) {
+        double best = 0;
+        if ([host hasPrefix:w]) best = 4;
+        else if ([t hasPrefix:w]) best = 4;
+        else if ([t rangeOfString:[@" " stringByAppendingString:w]].location != NSNotFound) best = 3;
+        else if ([t containsString:w]) best = 1.5;
+        else if ([host containsString:w]) best = 1.5;
+        else if ([u containsString:w]) best = 0.8;
+        if (best == 0) return 0;
+        score += best;
+    }
+    // A title that is exactly what's typed, or starts with it, wins outright.
+    NSString *q = [words componentsJoinedByString:@" "];
+    if ([t isEqualToString:q]) score += 4;
+    else if ([t hasPrefix:q]) score += 2;
+    return score;
+}
+
+
+NSString *TweakShortcutString(NSMenuItem *item) {
+    if (!item.keyEquivalent.length) return @"";
+    NSMutableString *s = [NSMutableString string];
+    NSEventModifierFlags m = item.keyEquivalentModifierMask;
+    if (m & NSEventModifierFlagControl) [s appendString:@"⌃"];
+    if (m & NSEventModifierFlagOption) [s appendString:@"⌥"];
+    if (m & NSEventModifierFlagShift) [s appendString:@"⇧"];
+    if (m & NSEventModifierFlagCommand) [s appendString:@"⌘"];
+    NSString *k = item.keyEquivalent;
+    NSDictionary *names = @{@"\r": @"↩", @"\t": @"⇥", @" ": @"Space", @"\x1b": @"⎋", @"\x7f": @"⌫",
+                            [NSString stringWithFormat:@"%C", (unichar)NSLeftArrowFunctionKey]: @"←",
+                            [NSString stringWithFormat:@"%C", (unichar)NSRightArrowFunctionKey]: @"→",
+                            [NSString stringWithFormat:@"%C", (unichar)NSUpArrowFunctionKey]: @"↑",
+                            [NSString stringWithFormat:@"%C", (unichar)NSDownArrowFunctionKey]: @"↓"};
+    [s appendString:names[k] ?: k.uppercaseString];
+    return s;
+}
+
+#pragma mark - Sources
+
+@implementation TweakCommandSources {
+    NSArray<TweakItem *> *_commands;
+    NSArray<TweakItem *> *_pages;
+    NSArray<TweakItem *> *_tabs;
+    NSArray<TweakItem *> *_bookmarks;
+    NSString *_searchTemplate;
+    NSString *_activeURL;
+    dispatch_queue_t _queue;
+    _Atomic NSUInteger _generation;  // read on the history queue to skip superseded queries
+    NSCache<NSString *, id> *_icons;
+}
+
+- (instancetype)init {
+    if ((self = [super init])) {
+        _queue = dispatch_queue_create("arcpatches.history", DISPATCH_QUEUE_SERIAL);
+        _icons = [NSCache new];
+    }
+    return self;
+}
+
+- (void)prepareForWindow:(NSWindow *)window {
+    _commands = [self loadCommands];
+    _pages = [self loadPages];
+    _tabs = [self loadTabs];
+    _bookmarks = [self loadBookmarks];
+    _searchTemplate = [self loadSearchTemplate];
+    _activeURL = TweakURLForWindow(window);
+    [_icons removeAllObjects];   // drop remembered misses: sites may have icons by now
+    [TweakCommandSources learnSiteIcons];
+}
+
+// Every enabled, visible command in Dia's menus, including submenus.
+- (NSArray<TweakItem *> *)loadCommands {
+    NSMutableArray *out = [NSMutableArray array];
+    NSMutableSet *seen = [NSMutableSet set];
+    NSSet *skipMenus = [NSSet setWithArray:@[@"Services", @"Open Recent", @"Help"]];
+    __block void (^walk)(NSMenu *, NSString *) = nil;
+    void (^__block __weak weakWalk)(NSMenu *, NSString *);
+    NSSet *topTitles = [NSSet setWithArray:[NSApp.mainMenu.itemArray valueForKey:@"title"]];
+    weakWalk = walk = ^(NSMenu *menu, NSString *path) {
+        [menu update];  // runs Dia's validation so isEnabled is current
+        for (NSMenuItem *i in menu.itemArray) {
+            if (i.isSeparatorItem || i.isHidden || !i.title.length) continue;
+            if (i.submenu) {
+                if (![skipMenus containsObject:i.title]) weakWalk(i.submenu, i.title);
+                continue;
+            }
+            if (!i.action || !i.isEnabled) continue;
+            if (i.action == @selector(makeKeyAndOrderFront:)) continue;  // window list
+            NSString *title = [i.title stringByReplacingOccurrencesOfString:@"…" withString:@""];
+            if (![topTitles containsObject:path]) title = [NSString stringWithFormat:@"%@ › %@", path, title];
+            if ([seen containsObject:title]) continue;
+            [seen addObject:title];
+            TweakItem *it = [TweakItem new];
+            it.kind = TweakItemCommand;
+            it.title = title;
+            it.detail = TweakShortcutString(i);
+            it.menuItem = i;
+            it.symbol = [self symbolForCommand:title];
+            [out addObject:it];
+        }
+    };
+    for (NSMenuItem *top in NSApp.mainMenu.itemArray)
+        if (top.submenu) walk(top.submenu, top.title);
+    walk = nil;
+    return out;
+}
+
+- (NSString *)symbolForCommand:(NSString *)t {
+    NSDictionary *map = @{@"Settings": @"gearshape", @"New Window": @"macwindow.badge.plus", @"New Tab": @"plus.square",
+                          @"Close Tab": @"xmark.square", @"Reopen Closed Tab": @"arrow.uturn.backward.square",
+                          @"Print": @"printer", @"Copy URL": @"link", @"Find": @"magnifyingglass", @"Reload": @"arrow.clockwise",
+                          @"Downloads": @"arrow.down.circle", @"History": @"clock", @"Bookmarks": @"bookmark",
+                          @"Extensions": @"puzzlepiece.extension", @"Quit Dia": @"power", @"Zoom In": @"plus.magnifyingglass",
+                          @"Zoom Out": @"minus.magnifyingglass", @"Developer Tools": @"hammer", @"Task Manager": @"chart.bar"};
+    for (NSString *k in map) if ([t hasPrefix:k]) return map[k];
+    return @"command";
+}
+
+- (NSArray<TweakItem *> *)loadPages {
+    NSArray *pages = @[
+        @[@"Chrome Flags", @"chrome://flags", @"flag"],
+        @[@"Extensions", @"chrome://extensions", @"puzzlepiece.extension"],
+        @[@"Downloads", @"chrome://downloads", @"arrow.down.circle"],
+        @[@"History", @"chrome://history", @"clock"],
+        @[@"Bookmarks", @"chrome://bookmarks", @"bookmark"],
+        @[@"Passwords", @"chrome://password-manager", @"key"],
+        @[@"Clear Browsing Data", @"chrome://settings/clearBrowserData", @"trash"],
+        @[@"Privacy and Security", @"chrome://settings/privacy", @"hand.raised"],
+        @[@"Site Settings", @"chrome://settings/content", @"slider.horizontal.3"],
+        @[@"Cookies and Site Data", @"chrome://settings/cookies", @"circle.hexagongrid"],
+        @[@"Search Engines", @"chrome://settings/searchEngines", @"magnifyingglass"],
+        @[@"Autofill and Addresses", @"chrome://settings/addresses", @"person.text.rectangle"],
+        @[@"Payment Methods", @"chrome://settings/payments", @"creditcard"],
+        @[@"Version", @"chrome://version", @"info.circle"],
+        @[@"GPU", @"chrome://gpu", @"cpu"],
+        @[@"Inspect Devices", @"chrome://inspect", @"hammer"],
+        @[@"Net Internals", @"chrome://net-internals", @"network"],
+    ];
+    NSMutableArray *out = [NSMutableArray array];
+    for (NSArray *p in pages) {
+        TweakItem *it = [TweakItem new];
+        it.kind = TweakItemPage;
+        it.title = p[0];
+        it.url = p[1];
+        it.detail = p[1];
+        it.symbol = p[2];
+        [out addObject:it];
+    }
+    return out;
+}
+
+- (NSArray<TweakItem *> *)loadTabs {
+    NSMutableArray *out = [NSMutableArray array];
+    @try {
+        for (id sw in [NSApp valueForKey:@"appleScriptWindows"]) {
+            NSString *wid = [sw valueForKey:@"windowId"];
+            for (id tab in [sw valueForKey:@"appleScriptTabs"]) {
+                NSString *url = [tab valueForKey:@"URL"];
+                if (![url isKindOfClass:NSString.class] || !url.length || [url hasPrefix:@"dia://"]) continue;
+                TweakItem *it = [TweakItem new];
+                it.kind = TweakItemTab;
+                it.title = [tab valueForKey:@"title"] ?: url;
+                it.url = url;
+                it.detail = @"Switch to Tab";
+                it.tabId = [tab valueForKey:@"tabId"];
+                it.windowId = wid;
+                it.symbol = @"square.on.square";
+                it.frecency = 3.0;  // open tabs are usually what you're looking for
+                [out addObject:it];
+            }
+        }
+    } @catch (__unused NSException *e) {}
+    return out;
+}
+
+- (NSArray<TweakItem *> *)loadBookmarks {
+    NSData *data = [NSData dataWithContentsOfFile:[profileDir() stringByAppendingPathComponent:@"Bookmarks"]];
+    NSDictionary *json = data ? [NSJSONSerialization JSONObjectWithData:data options:0 error:nil] : nil;
+    NSMutableArray *out = [NSMutableArray array];
+    __block void (^walk)(NSDictionary *) = nil;
+    void (^__block __weak weakWalk)(NSDictionary *);
+    weakWalk = walk = ^(NSDictionary *node) {
+        if ([node[@"type"] isEqual:@"url"] && [node[@"url"] isKindOfClass:NSString.class]) {
+            TweakItem *it = [TweakItem new];
+            it.kind = TweakItemBookmark;
+            it.title = node[@"name"];
+            it.url = node[@"url"];
+            it.detail = node[@"url"];
+            it.symbol = @"bookmark";
+            it.frecency = 1.0;
+            [out addObject:it];
+        }
+        for (NSDictionary *c in node[@"children"]) if ([c isKindOfClass:NSDictionary.class]) weakWalk(c);
+    };
+    for (NSDictionary *root in [json[@"roots"] allValues]) if ([root isKindOfClass:NSDictionary.class]) walk(root);
+    walk = nil;
+    return out;
+}
+
+// Dia's default search engine, from the profile's Preferences + Web Data.
+- (NSString *)loadSearchTemplate {
+    NSString *fallback = @"https://www.google.com/search?q={searchTerms}";
+    NSData *prefs = [NSData dataWithContentsOfFile:[profileDir() stringByAppendingPathComponent:@"Preferences"]];
+    NSDictionary *p = prefs ? [NSJSONSerialization JSONObjectWithData:prefs options:0 error:nil] : nil;
+    NSString *guid = p[@"default_search_provider"][@"guid"];
+    if (![guid isKindOfClass:NSString.class]) return fallback;
+    __block NSString *url = nil;
+    [self sqlite:@"Web Data" query:@"SELECT url FROM keywords WHERE sync_guid = ?1 LIMIT 1" bind:@[guid] row:^(sqlite3_stmt *s) {
+        url = @((const char *)sqlite3_column_text(s, 0) ?: "");
+    }];
+    return url.length ? url : fallback;
+}
+
+- (NSString *)searchURLFor:(NSString *)text {
+    NSMutableCharacterSet *allowed = [NSCharacterSet.URLQueryAllowedCharacterSet mutableCopy];
+    [allowed removeCharactersInString:@"&=+?#"];
+    // nil for a lone surrogate (lossy UTF-8 conversion returns nil too); replacing with nil would throw.
+    NSString *q = [text stringByAddingPercentEncodingWithAllowedCharacters:allowed] ?: @"";
+    NSString *u = [_searchTemplate ?: @"https://www.google.com/search?q={searchTerms}" stringByReplacingOccurrencesOfString:@"{searchTerms}" withString:q];
+    u = [u stringByReplacingOccurrencesOfString:@"{google:baseURL}" withString:@"https://www.google.com/"];
+    // Drop the remaining Chromium-only placeholders ({google:RLZ} etc.).
+    NSRegularExpression *ph = [NSRegularExpression regularExpressionWithPattern:@"\\{[^}]*\\}" options:0 error:nil];
+    u = [ph stringByReplacingMatchesInString:u options:0 range:NSMakeRange(0, u.length) withTemplate:@""];
+    while ([u hasSuffix:@"&"]) u = [u substringToIndex:u.length - 1];
+    return u;
+}
+
+- (NSString *)searchEngineName {
+    NSString *host = [NSURL URLWithString:[self searchURLFor:@"x"]].host;
+    for (NSString *n in @[@"Google", @"DuckDuckGo", @"Bing", @"Brave", @"Ecosia", @"Kagi", @"Perplexity", @"Startpage"])
+        if ([host.lowercaseString containsString:n.lowercaseString]) return n;
+    return host ?: @"the web";
+}
+
+#pragma mark - SQLite (read-only, never locks Dia's databases)
+
+- (void)sqlite:(NSString *)file query:(NSString *)sql bind:(NSArray *)args row:(void (^)(sqlite3_stmt *))row {
+    NSString *path = [profileDir() stringByAppendingPathComponent:file];
+    NSString *uri = [NSString stringWithFormat:@"file:%@?immutable=1", [path stringByAddingPercentEncodingWithAllowedCharacters:NSCharacterSet.URLPathAllowedCharacterSet]];
+    sqlite3 *db = NULL;
+    if (sqlite3_open_v2(uri.UTF8String, &db, SQLITE_OPEN_READONLY | SQLITE_OPEN_URI, NULL) != SQLITE_OK) { sqlite3_close(db); return; }
+    sqlite3_stmt *st = NULL;
+    if (sqlite3_prepare_v2(db, sql.UTF8String, -1, &st, NULL) == SQLITE_OK) {
+        for (int i = 0; i < (int)args.count; i++) {
+            if ([args[i] isKindOfClass:NSNumber.class]) sqlite3_bind_int64(st, i + 1, [args[i] longLongValue]);
+            else sqlite3_bind_text(st, i + 1, [args[i] UTF8String], -1, SQLITE_TRANSIENT);
+        }
+        while (sqlite3_step(st) == SQLITE_ROW) row(st);
+    }
+    sqlite3_finalize(st);
+    sqlite3_close(db);
+}
+
+static NSString *likeEscape(NSString *s) {
+    return [[[s stringByReplacingOccurrencesOfString:@"\\" withString:@"\\\\"] stringByReplacingOccurrencesOfString:@"%" withString:@"\\%"]
+            stringByReplacingOccurrencesOfString:@"_" withString:@"\\_"];
+}
+
+- (NSArray<TweakItem *> *)historyFor:(NSArray<NSString *> *)words {
+    if (!words.count) return @[];
+    // Every word must appear in the URL or title; rank by typed count, visits, recency.
+    NSMutableString *where = [NSMutableString stringWithString:@"hidden = 0"];
+    NSMutableArray *args = [NSMutableArray array];
+    for (NSString *w in words) {
+        // SQLite's LIKE folds ASCII case only, so non-ASCII words also try their upper and capitalized forms.
+        NSArray *forms = [w canBeConvertedToEncoding:NSASCIIStringEncoding] ? @[w] : @[w, w.uppercaseString, w.capitalizedString];
+        NSMutableString *any = [NSMutableString string];
+        for (NSString *f in forms) {
+            [args addObject:[NSString stringWithFormat:@"%%%@%%", likeEscape(f)]];
+            [any appendFormat:@"%@url LIKE ?%lu ESCAPE '\\' OR title LIKE ?%lu ESCAPE '\\'", any.length ? @" OR " : @"", (unsigned long)args.count, (unsigned long)args.count];
+        }
+        [where appendFormat:@" AND (%@)", any];
+    }
+    NSString *sql = [NSString stringWithFormat:@"SELECT url, title, visit_count, typed_count, last_visit_time FROM urls WHERE %@ "
+                     "ORDER BY typed_count * 2 + visit_count DESC, last_visit_time DESC LIMIT 80", where];
+    NSMutableArray *out = [NSMutableArray array];
+    // Chromium time: microseconds since 1601-01-01.
+    double nowChrome = (NSDate.date.timeIntervalSince1970 + 11644473600.0) * 1e6;
+    [self sqlite:@"History" query:sql bind:args row:^(sqlite3_stmt *s) {
+        TweakItem *it = [TweakItem new];
+        it.kind = TweakItemHistory;
+        it.url = @((const char *)sqlite3_column_text(s, 0) ?: "");
+        NSString *title = @((const char *)sqlite3_column_text(s, 1) ?: "");
+        it.title = title.length ? title : it.url;
+        it.detail = it.url;
+        it.symbol = @"globe";
+        double visits = sqlite3_column_int(s, 2), typed = sqlite3_column_int(s, 3);
+        double ageDays = MAX(0, (nowChrome - sqlite3_column_int64(s, 4)) / 8.64e10);
+        // Log-scaled and uncapped, so a site visited thousands of times clearly outranks
+        // one visited dozens of times (typing "g" should give the Google you always use).
+        it.frecency = log2(visits + 1) * 0.6 + log2(typed + 1) * 0.8 + 1.5 / (1 + ageDays / 7.0);
+        [out addObject:it];
+    }];
+    return out;
+}
+
+#pragma mark - Query
+
+- (void)query:(NSString *)text done:(void (^)(NSArray<TweakItem *> *))done {
+    NSString *q = [text stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceCharacterSet].lowercaseString;
+    NSUInteger gen = ++_generation;
+    if (!q.length) {
+        // Empty: open tabs, most recent first, like Arc.
+        NSArray *tabs = [_tabs subarrayWithRange:NSMakeRange(0, MIN((NSUInteger)8, _tabs.count))];
+        done(tabs);
+        return;
+    }
+    NSArray *words = [q componentsSeparatedByCharactersInSet:NSCharacterSet.whitespaceCharacterSet];
+    words = [words filteredArrayUsingPredicate:[NSPredicate predicateWithFormat:@"length > 0"]];
+    NSArray *commands = _commands, *pages = _pages, *tabs = _tabs, *bookmarks = _bookmarks;
+    NSString *activeURL = _activeURL;
+    // _searchTemplate is replaced on each open, so read it here on main, not on the queue.
+    NSString *searchURL = [self searchURLFor:text], *engine = [self searchEngineName];
+    dispatch_async(_queue, ^{
+        if (gen != self->_generation) return;  // typed past; don't scan History for this one
+        NSMutableArray<TweakItem *> *all = [NSMutableArray array];
+        // Ranking: a command, page or tab that matches by prefix beats history (as in
+        // Arc); history is ordered by match plus frecency.
+        void (^add)(NSArray<TweakItem *> *, double, double, double) = ^(NSArray<TweakItem *> *list, double minMatch, double weight, double prefixBonus) {
+            for (TweakItem *it in list) {
+                double m = matchScore(words, it.title, it.kind == TweakItemCommand ? nil : it.url);
+                if (m < minMatch) continue;
+                // Commands and pages win when you've clearly started typing their name
+                // (3+ letters, "set" -> Settings); for "g" or "go" your most visited sites lead.
+                double coverage = MIN(1.0, 2.0 * q.length / MAX((NSUInteger)1, it.title.length));
+                BOOL named = m >= 4 * words.count && (it.kind == TweakItemTab || q.length >= 3);
+                it.score = m * weight + it.frecency + (named ? prefixBonus * coverage : 0);
+                [all addObject:it];
+            }
+        };
+        add(commands, 2.5, 1.2, 15.0);
+        add(pages, 2.5, 1.2, 14.0);
+        add(tabs, 0.8, 1.25, 2.5);
+        add(bookmarks, 1.0, 1.1, 1.0);
+        NSArray<TweakItem *> *history = [self historyFor:words];
+        add(history, 0.8, 1.0, 0);
+
+        // A site that's open in a tab is offered as "Switch to Tab", with its history weight.
+        NSMutableDictionary<NSString *, TweakItem *> *historyByURL = [NSMutableDictionary dictionary];
+        for (TweakItem *h in history) if (h.url) historyByURL[h.url] = h;
+        for (TweakItem *t in all)
+            if (t.kind == TweakItemTab && historyByURL[t.url]) t.score = MAX(t.score, historyByURL[t.url].score + 0.5);
+
+        // De-duplicate URLs: an open tab beats a bookmark beats history.
+        [all sortUsingComparator:^NSComparisonResult(TweakItem *a, TweakItem *b) { return a.score > b.score ? NSOrderedAscending : a.score < b.score ? NSOrderedDescending : NSOrderedSame; }];
+        NSMutableArray<TweakItem *> *ranked = [NSMutableArray array];
+        NSMutableSet *urls = [NSMutableSet set];
+        NSCountedSet *perSite = [NSCountedSet set], *perTitle = [NSCountedSet set];
+        for (TweakItem *it in all) {
+            NSString *key = it.url ? [it.url stringByTrimmingCharactersInSet:[NSCharacterSet characterSetWithCharactersInString:@"/"]] : it.title;
+            if (it.kind == TweakItemTab && [it.url isEqualToString:activeURL]) continue;  // already here
+            if ([urls containsObject:key]) continue;
+            // At most two history rows per site, so one site can't fill the list.
+            NSString *site = [NSURL URLWithString:it.url].host;
+            if (it.kind == TweakItemHistory && site && [perSite countForObject:site] >= 2) continue;
+            if (it.kind == TweakItemHistory && it.title && [perTitle countForObject:it.title] >= 2) continue;
+            if (site) [perSite addObject:site];
+            if (it.title) [perTitle addObject:it.title];
+            [urls addObject:key];
+            [ranked addObject:it];
+        }
+
+        // What was typed: as an address, or a search. Second place unless nothing else is strong.
+        TweakItem *typed = [TweakItem new];
+        if (TweakLooksLikeAddress(q)) {
+            typed.kind = TweakItemURL;
+            typed.url = TweakResolveInput(text);
+            typed.title = text;
+            typed.detail = @"Open";
+            typed.symbol = @"globe";
+        } else {
+            typed.kind = TweakItemSearch;
+            typed.title = text;
+            typed.url = searchURL;
+            typed.detail = [@"Search " stringByAppendingString:engine];
+            typed.symbol = @"magnifyingglass";
+        }
+        BOOL strongTop = ranked.count && ((TweakItem *)ranked[0]).score >= 5;
+        [ranked insertObject:typed atIndex:strongTop ? 1 : 0];
+
+        NSArray *items = [ranked subarrayWithRange:NSMakeRange(0, MIN((NSUInteger)8, ranked.count))];
+        dispatch_async(dispatch_get_main_queue(), ^{ if (gen == self->_generation) done(items); });
+    });
+}
+
+- (NSString *)completionFor:(NSString *)text inItems:(NSArray<TweakItem *> *)items url:(NSString **)url {
+    NSString *q = text.lowercaseString;
+    if (!q.length || [q rangeOfCharacterFromSet:NSCharacterSet.whitespaceCharacterSet].location != NSNotFound) return nil;
+    for (TweakItem *it in items) {
+        if (it.kind != TweakItemHistory && it.kind != TweakItemTab && it.kind != TweakItemBookmark) continue;
+        NSURLComponents *c = [NSURLComponents componentsWithString:it.url];
+        NSString *host = c.host.lowercaseString;
+        if (!host.length || !c.scheme.length) break;
+        NSString *site = [host hasPrefix:@"www."] ? [host substringFromIndex:4] : host;
+        if (c.port) site = [site stringByAppendingFormat:@":%@", c.port];
+        if (site.length > q.length && [site hasPrefix:q]) {
+            // The site's root, keeping http and the port: "homeassistant.local" alone would become https.
+            *url = [NSString stringWithFormat:@"%@://%@%@/", c.scheme.lowercaseString, host, c.port ? [@":" stringByAppendingString:c.port.stringValue] : @""];
+            return site;
+        }
+        break;  // only complete from the top-ranked page
+    }
+    return nil;
+}
+
+#pragma mark - Favicons
+
+// Dia's Chromium forgets which page used which favicon after a day or two, and drops
+// the images too. So ArcPatches keeps its own copy of each site's icon, saved from
+// Chromium's database while the site was recent, and falls back to it.
+static NSString *siteKey(NSURL *u) {
+    NSString *host = u.host.lowercaseString;
+    if (!host.length) return nil;
+    if ([host hasPrefix:@"www."]) host = [host substringFromIndex:4];
+    return u.port ? [NSString stringWithFormat:@"%@_%@", host, u.port] : host;
+}
+
+static NSString *siteIconPath(NSString *site) {
+    NSString *dir = [NSHomeDirectory() stringByAppendingPathComponent:@"Library/Application Support/arcpatches/site-icons"];
+    return [dir stringByAppendingPathComponent:[site stringByAppendingPathExtension:@"png"]];
+}
+
+static dispatch_queue_t learnQueue(void) {
+    static dispatch_queue_t q;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{ q = dispatch_queue_create("arcpatches.site-icons", DISPATCH_QUEUE_SERIAL); });
+    return q;
+}
+
+// Saves the largest current icon of every site Chromium still links (in the background).
++ (void)learnSiteIcons {
+    dispatch_async(learnQueue(), ^{
+        TweakCommandSources *s = [TweakCommandSources new];
+        NSMutableDictionary<NSString *, NSData *> *best = [NSMutableDictionary dictionary];
+        [s sqlite:@"Favicons" query:@"SELECT m.page_url, b.image_data FROM icon_mapping m JOIN favicon_bitmaps b ON b.icon_id = m.icon_id "
+                                     "WHERE length(b.image_data) > 0 ORDER BY m.id, b.width" bind:@[] row:^(sqlite3_stmt *st) {
+            NSString *key = siteKey([NSURL URLWithString:@((const char *)sqlite3_column_text(st, 0) ?: "")]);
+            if (key) best[key] = [NSData dataWithBytes:sqlite3_column_blob(st, 1) length:sqlite3_column_bytes(st, 1)];
+        }];
+        NSFileManager *fm = NSFileManager.defaultManager;
+        if (best.count) [fm createDirectoryAtPath:siteIconPath(@"x").stringByDeletingLastPathComponent withIntermediateDirectories:YES attributes:nil error:nil];
+        [best enumerateKeysAndObjectsUsingBlock:^(NSString *site, NSData *png, BOOL *stop) {
+            NSString *path = siteIconPath(site);
+            if (![[NSData dataWithContentsOfFile:path] isEqualToData:png]) [png writeToFile:path atomically:YES];
+        }];
+    });
+}
+
+- (NSImage *)faviconFor:(NSString *)url {
+    if (!url.length) return nil;
+    id cached = [_icons objectForKey:url];
+    if (cached) return cached == NSNull.null ? nil : cached;
+    NSURL *u = [NSURL URLWithString:url];
+    NSString *host = u.port ? [NSString stringWithFormat:@"%@:%@", u.host, u.port] : u.host;
+    // The page itself, then any page on the same host, while Chromium still has them.
+    __block NSData *png = nil;
+    [self sqlite:@"Favicons" query:@"SELECT b.image_data FROM icon_mapping m JOIN favicon_bitmaps b ON b.icon_id = m.icon_id "
+                                    "WHERE (m.page_url = ?1 OR m.page_url LIKE ?2) AND length(b.image_data) > 0 ORDER BY (m.page_url = ?1) DESC, b.width DESC LIMIT 1"
+            bind:@[url, [NSString stringWithFormat:@"%%://%@/%%", host ?: @"-"]] row:^(sqlite3_stmt *s) {
+        png = [NSData dataWithBytes:sqlite3_column_blob(s, 0) length:sqlite3_column_bytes(s, 0)];
+    }];
+    // Otherwise the icon saved from an earlier visit.
+    NSString *site = siteKey(u);
+    if (!png.length && site) png = [NSData dataWithContentsOfFile:siteIconPath(site)];
+    NSImage *img = png.length ? [[NSImage alloc] initWithData:png] : nil;
+    [_icons setObject:img ?: (id)NSNull.null forKey:url];
+    return img;
+}
+
+@end
+
+void TweakSiteIconsInstall(void) {
+    // Chromium keeps a site's favicon only a day or two after the last visit: save often.
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 60 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{ [TweakCommandSources learnSiteIcons]; });
+    NSTimer *t = [NSTimer scheduledTimerWithTimeInterval:15 * 60 repeats:YES block:^(__unused NSTimer *timer) { [TweakCommandSources learnSiteIcons]; }];
+    t.tolerance = 60;
+}

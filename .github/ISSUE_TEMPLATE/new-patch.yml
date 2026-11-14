@@ -1,0 +1,34 @@
+name: New patch
+description: Propose a tweak to how a browser looks or behaves
+labels: ["enhancement", "patch"]
+body:
+  - type: dropdown
+    id: browsers
+    attributes:
+      label: Browsers
+      multiple: true
+      options: [Dia, Arc, Other]
+    validations: { required: true }
+  - type: input
+    id: name
+    attributes:
+      label: Name
+      placeholder: "Copy URL button in sidebar"
+    validations: { required: true }
+  - type: textarea
+    id: change
+    attributes:
+      label: What it changes
+      description: How it should look and behave. If it copies Arc, describe exactly what Arc does.
+    validations: { required: true }
+  - type: textarea
+    id: reference
+    attributes:
+      label: Screenshots or recording
+      description: The target look (for example Arc) and the current browser side by side.
+    validations: { required: true }
+  - type: dropdown
+    id: layout
+    attributes:
+      label: Tab layout
+      options: [Sidebar, Tabs at the top, Both]
