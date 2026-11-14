@@ -19,11 +19,14 @@ The sizes come from measuring Arc 1.x on macOS. Everything is drawn with Apple's
 | Group | Tokens | Notes |
 | --- | --- | --- |
 | Spacing | `ArcSpace1–4` (4, 8, 12, 16), `ArcSidebarInset` (6) | 4-pt grid |
-| Radii | Small 7, Medium 8, Pill 10, Popover 14 | Always continuous corners (`ArcRound`) |
-| Sizes | Top-row button 28 / icon 14, pill 36, pill button 28 / icon 13, popover 272 wide, tile 34, row icon 30 | Hit areas are never smaller than 28 pt |
-| Type | URL 13 regular, row title 13 medium, subtitle 11, section header 12 semibold, chip 12 medium | System font only |
+| Radii | Chip 6, Small 7, Medium 8, Pill 10, Popover 14 | Always continuous corners (`ArcRound`) |
+| Sizes | Top-row button 28 / icon 14, pill 36, pill button 28 / icon 13, popover 272 wide, tile 34, row icon 30, favicon 16, chip 22 (rounded square behind a row's action icon) | Hit areas are never smaller than 28 pt |
+| Type | URL 13 regular, row title 13 medium, subtitle 11, section header 12 semibold, chip 12 medium, palette field 17 regular, palette row 14 medium, palette detail 13 regular, accessory ("Switch to Tab") 13 medium | System font only |
 | Fill | Rest 8%, hover 11%, pressed 16%, selected 14%, tile 7% | White on dark chrome, black on light (about 60% of the dark alpha) |
 | Icon colour | Secondary label, or tertiary when disabled | Never full-contrast labels in chrome |
+| Panel colour | Tertiary text (white 58% / black 64%), panel tint (94% wash over the blur), panel border (white 12% / black 10%), text selection (white 24% / black 14%) | Tertiary is tuned to ~6:1 because the system tertiary label reads ~2:1 on the palette. The tint keeps the palette dark over white pages |
+| Palette (⌘T) | Width 520 (content width − 2 × margin 24 at most), top at 30% of the web content, search row 52 with a 15-pt magnifying glass at 18, rows 34 with 6 gaps inside an 8 inset, appears from scale 0.98 | Centred over the web content, not the window |
+| URL editor (⌘L) | Width 1.55 × sidebar width, clamped to 300–420 and the window, rows 44, Dia's editor popover offset 0 from the pill | Its top-left sits on the pill's top-left, covering it |
 | Motion | Fast 0.12 s (hover), medium 0.2 s (appear and crossfade), "Copied" held 1.2 s | Ease-out when appearing, ease-in when leaving. Instant when Reduce Motion is on (`ArcAnimate`) |
 
 ## Components
@@ -35,6 +38,8 @@ The sizes come from measuring Arc 1.x on macOS. Everything is drawn with Apple's
   2. **Extensions**, a 4-column grid
   3. **Settings**, rows with a circular icon, a title and a state subtitle
   4. a hairline, then a footer with a security chip and a "…" menu
+- **Command palette (⌘T):** a floating panel centred over the web content: a search row, a hairline, then up to eight rows. Open tabs end in "Switch to Tab" and an arrow chip, which turn full contrast on the highlighted row. It fades in from 0.98 scale and fades out.
+- **URL editor (⌘L):** drops down from the URL pill, covering it: the site's favicon and the full URL (selected), then the current page, the site's root and related history before you type.
 - **Feedback:** confirm in place. "Copied" replaces the host and the link icon becomes a checkmark, then both restore. No toasts for actions that happened where you clicked.
 
 ## Voice

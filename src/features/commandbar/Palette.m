@@ -4,7 +4,7 @@
 //
 // Dia's editor always navigates the current tab, so while the palette is open we
 // intercept that load and open the URL in a new tab instead.
-#import "Common.h"
+#import "CommandBarInternal.h"   // TweakCommandBarContentRect, ArcStyle
 #import "Features.h"
 #import "Browser.h"
 #import <objc/runtime.h>
@@ -35,12 +35,11 @@ static id hookedLoad(id self, SEL _cmd, NSURL *url, id origin, long transition, 
 
 BOOL TweakPaletteOpen(NSWindow *window) {
     if (!paletteEnabled() || !window || !origLoad) return NO;
-    NSView *frame = window.contentView.superview ?: window.contentView;
-    NSRect b = frame.bounds;
-    // Centred, about a fifth of the way down: where Arc puts its command bar.
-    CGFloat width = MIN(680, NSWidth(b) - 80);
-    CGFloat top = NSHeight(b) * 0.80;
-    NSRect anchor = NSMakeRect(NSMidX(b) - width / 2 + 6, top - 30, width - 12, 30);
+    // Centred over the web content (not the sidebar), its top 30% of the way down: where Arc puts its palette.
+    NSRect b = [window convertRectFromScreen:TweakCommandBarContentRect(window)];
+    CGFloat width = MIN(ArcPaletteWidth, NSWidth(b) - 2 * ArcPaletteMargin);
+    CGFloat top = NSMaxY(b) - NSHeight(b) * ArcPaletteTopFraction;
+    NSRect anchor = NSMakeRect(round(NSMidX(b) - width / 2), top - ArcPillHeight, width, ArcPillHeight);
     if (!TweakNavBarOpenEditor(window, anchor)) return NO;
 
     gPaletteWindow = window;

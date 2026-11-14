@@ -3,16 +3,20 @@
 
 #pragma mark - Results list
 
-@implementation TweakResultsView
+@implementation TweakResultsView {
+    NSPoint _lastMouse;   // screen; hover only follows a pointer that moved
+}
 
 - (BOOL)isFlipped { return YES; }
 - (BOOL)acceptsFirstMouse:(NSEvent *)e { return YES; }
 
 - (void)setItems:(NSArray<TweakItem *> *)items { _items = [items copy]; _selected = items.count ? 0 : -1; self.needsDisplay = YES; }
 - (void)setSelected:(NSInteger)s { _selected = s; self.needsDisplay = YES; }
+- (void)setMetrics:(TweakBarMetrics)m { _metrics = m; self.needsDisplay = YES; }
 
 - (NSRect)rectForRow:(NSInteger)r {
-    return NSMakeRect(kListInset, kListInset + r * kRowHeight, NSWidth(self.bounds) - kListInset * 2, kRowHeight);
+    TweakBarMetrics m = self.metrics;
+    return NSMakeRect(m.listInset, m.listInset + r * (m.rowHeight + m.rowGap), NSWidth(self.bounds) - m.listInset * 2, m.rowHeight);
 }
 
 - (NSInteger)rowAt:(NSPoint)p {
@@ -28,6 +32,11 @@
 }
 
 - (void)mouseMoved:(NSEvent *)e {
+    // Rows reflowing under a still pointer (typing, the panel resizing) must not take
+    // the highlight away from the arrow keys.
+    NSPoint screen = NSEvent.mouseLocation;
+    if (NSEqualPoints(screen, _lastMouse)) return;
+    _lastMouse = screen;
     NSInteger r = [self rowAt:[self convertPoint:e.locationInWindow fromView:nil]];
     if (r >= 0 && r != self.selected) self.selected = r;
 }
@@ -37,84 +46,80 @@
     if (r >= 0) [self.delegate resultsView:self activate:r];
 }
 
+static BOOL showsDetail(TweakItemKind k) {
+    return k == TweakItemHistory || k == TweakItemBookmark || k == TweakItemPage || k == TweakItemSearch || k == TweakItemURL;
+}
+
 - (void)drawRect:(NSRect)dirty {
-    NSFont *titleFont = [NSFont systemFontOfSize:15 weight:NSFontWeightMedium];
-    NSFont *detailFont = [NSFont systemFontOfSize:15 weight:NSFontWeightRegular];
     NSMutableParagraphStyle *trunc = [NSMutableParagraphStyle new];
-    trunc.lineBreakMode = NSLineBreakByTruncatingMiddle;
+    trunc.lineBreakMode = NSLineBreakByTruncatingTail;
+    NSDictionary *ta = @{NSFontAttributeName: ArcFontPaletteRow(), NSForegroundColorAttributeName: NSColor.labelColor,
+                         NSParagraphStyleAttributeName: trunc};
+    CGFloat pad = (ArcChipSize - ArcFaviconSize) / 2;   // a favicon lines up with a chip's symbol
     for (NSInteger r = 0; r < (NSInteger)self.items.count; r++) {
         TweakItem *it = self.items[r];
         NSRect row = [self rectForRow:r];
-        if (r == self.selected) {
-            [dyn(1, 0.10, 0, 0.07) setFill];
-            [[NSBezierPath bezierPathWithRoundedRect:row xRadius:10 yRadius:10] fill];
+        BOOL sel = r == self.selected;
+        if (sel) {
+            [ArcFillColor(ArcFillSelected) setFill];
+            [[NSBezierPath bezierPathWithRoundedRect:row xRadius:ArcRadiusMedium yRadius:ArcRadiusMedium] fill];
         }
 
-        // Icon: favicon, or a symbol (commands get a filled tile, like Arc).
-        NSRect iconRect = NSMakeRect(NSMinX(row) + 14, NSMidY(row) - 10, 20, 20);
+        // Icon: a favicon, an action's symbol in a rounded square, or a plain symbol.
+        NSRect iconRect = NSMakeRect(NSMinX(row) + ArcSpace2 + pad, round(NSMidY(row) - ArcFaviconSize / 2), ArcFaviconSize, ArcFaviconSize);
         NSImage *icon = [self.delegate iconForItem:it];
         if (it.kind == TweakItemCommand || it.kind == TweakItemPage) {
-            NSRect tile = NSInsetRect(iconRect, -4, -4);
-            [(it.kind == TweakItemCommand ? NSColor.labelColor : dyn(1, 0.14, 0, 0.08)) setFill];
-            [[NSBezierPath bezierPathWithRoundedRect:tile xRadius:7 yRadius:7] fill];
-            NSImage *sym = [[NSImage imageWithSystemSymbolName:it.symbol accessibilityDescription:nil]
-                            imageWithSymbolConfiguration:[NSImageSymbolConfiguration configurationWithPointSize:13 weight:NSFontWeightMedium]];
-            NSColor *tint = it.kind == TweakItemCommand ? NSColor.windowBackgroundColor : NSColor.labelColor;
-            [self drawSymbol:sym in:iconRect tint:tint];
+            NSRect chip = NSInsetRect(iconRect, -pad, -pad);
+            [self drawChip:chip selected:sel];
+            [self drawSymbol:ArcSymbol(it.symbol, ArcPillIcon, NSFontWeightMedium, nil) in:chip tint:sel ? NSColor.labelColor : ArcIconColor(YES)];
         } else if (icon) {
-            if (r == self.selected) {
-                // Selected favicons sit on a white tile, like Arc.
-                [NSColor.whiteColor setFill];
-                [[NSBezierPath bezierPathWithRoundedRect:NSInsetRect(iconRect, -4, -4) xRadius:7 yRadius:7] fill];
-            }
             [icon drawInRect:iconRect fromRect:NSZeroRect operation:NSCompositingOperationSourceOver fraction:1 respectFlipped:YES hints:nil];
         } else {
-            NSImage *sym = [[NSImage imageWithSystemSymbolName:it.symbol accessibilityDescription:nil]
-                            imageWithSymbolConfiguration:[NSImageSymbolConfiguration configurationWithPointSize:15 weight:NSFontWeightRegular]];
-            [self drawSymbol:sym in:iconRect tint:NSColor.secondaryLabelColor];
+            [self drawSymbol:ArcSymbol(it.symbol, ArcPaletteSearchIcon, NSFontWeightRegular, nil) in:iconRect tint:ArcIconColor(YES)];
         }
 
-        // Title — detail, with the detail truncated first.
-        CGFloat x = NSMaxX(iconRect) + 16, maxX = NSMaxX(row) - 16;
-        NSString *right = it.kind == TweakItemCommand ? it.detail : nil;
+        // Title, then "— detail" (truncated first). Open tabs end in "Switch to Tab" and an
+        // arrow chip: full contrast on the highlighted row, tertiary elsewhere.
+        CGFloat x = NSMaxX(iconRect) + pad + ArcSpace3, maxX = NSMaxX(row) - ArcSpace2;
         if (it.kind == TweakItemTab) {
-            // "Switch to Tab" + arrow chip; bright when selected.
-            BOOL sel = r == self.selected;
-            NSRect chip = NSMakeRect(maxX - 28 + 4, NSMidY(row) - 14, 28, 28);
-            [(sel ? NSColor.labelColor : dyn(1, 0.16, 0, 0.09)) setFill];
-            [[NSBezierPath bezierPathWithRoundedRect:chip xRadius:7 yRadius:7] fill];
-            NSImage *arrow = [[NSImage imageWithSystemSymbolName:@"arrow.right" accessibilityDescription:@"Switch to Tab"]
-                              imageWithSymbolConfiguration:[NSImageSymbolConfiguration configurationWithPointSize:13 weight:NSFontWeightSemibold]];
-            [self drawSymbol:arrow in:chip tint:sel ? NSColor.windowBackgroundColor : NSColor.secondaryLabelColor];
-            NSDictionary *ra = @{NSFontAttributeName: sel ? titleFont : detailFont,
-                                 NSForegroundColorAttributeName: sel ? NSColor.labelColor : detailColor()};
-            NSSize rs = [it.detail sizeWithAttributes:ra];
-            [it.detail drawAtPoint:NSMakePoint(NSMinX(chip) - 12 - rs.width, NSMidY(row) - rs.height / 2) withAttributes:ra];
-            maxX = NSMinX(chip) - 12 - rs.width - 16;
+            NSColor *accessory = sel ? NSColor.labelColor : ArcTextTertiary();
+            NSRect chip = NSMakeRect(maxX - ArcChipSize, round(NSMidY(row) - ArcChipSize / 2), ArcChipSize, ArcChipSize);
+            [self drawChip:chip selected:sel];
+            [self drawSymbol:ArcSymbol(@"arrow.right", ArcPillIcon, NSFontWeightSemibold, @"Switch to Tab") in:chip tint:accessory];
+            maxX = [self drawTrailing:it.detail font:ArcFontAccessory() color:accessory endingAt:NSMinX(chip) - ArcSpace2 row:row];
+        } else if (it.kind == TweakItemCommand) {
+            maxX = [self drawTrailing:it.detail font:ArcFontPaletteDetail() color:ArcTextTertiary() endingAt:maxX row:row];
         }
-        if (right.length) {
-            NSDictionary *ra = @{NSFontAttributeName: detailFont, NSForegroundColorAttributeName: detailColor()};
-            NSSize rs = [right sizeWithAttributes:ra];
-            [right drawAtPoint:NSMakePoint(maxX - rs.width, NSMidY(row) - rs.height / 2) withAttributes:ra];
-            maxX -= rs.width + 16;
-        }
-        NSDictionary *ta = @{NSFontAttributeName: titleFont, NSForegroundColorAttributeName: NSColor.labelColor, NSParagraphStyleAttributeName: trunc};
         NSString *title = it.title ?: @"";
         NSSize ts = [title sizeWithAttributes:ta];
-        CGFloat titleW = MIN(ts.width, (maxX - x) * 0.6);
-        if (!(it.kind == TweakItemHistory || it.kind == TweakItemBookmark || it.kind == TweakItemPage || it.kind == TweakItemSearch || it.kind == TweakItemURL)) titleW = MIN(ts.width, maxX - x);
+        CGFloat titleW = MAX(0, MIN(ts.width, (maxX - x) * (showsDetail(it.kind) ? 0.6 : 1)));
         [title drawInRect:NSMakeRect(x, NSMidY(row) - ts.height / 2, titleW, ts.height) withAttributes:ta];
         NSString *detail = nil;
         if (it.kind == TweakItemHistory || it.kind == TweakItemBookmark || it.kind == TweakItemPage) detail = [self prettyURL:it.url];
         else if (it.kind == TweakItemSearch || it.kind == TweakItemURL) detail = it.detail;
         if (detail.length) {
-            NSDictionary *da = @{NSFontAttributeName: detailFont, NSForegroundColorAttributeName: detailColor(), NSParagraphStyleAttributeName: trunc};
+            NSDictionary *da = @{NSFontAttributeName: ArcFontPaletteDetail(), NSForegroundColorAttributeName: ArcTextTertiary(),
+                                 NSParagraphStyleAttributeName: trunc};
             NSString *d = [@"— " stringByAppendingString:detail];
             NSSize ds = [d sizeWithAttributes:da];
-            CGFloat dx = x + titleW + 8;
+            CGFloat dx = x + titleW + ArcSpace2;
             [d drawInRect:NSMakeRect(dx, NSMidY(row) - ds.height / 2, MAX(0, maxX - dx), ds.height) withAttributes:da];
         }
     }
+}
+
+- (void)drawChip:(NSRect)chip selected:(BOOL)sel {
+    [ArcFillColor(sel ? ArcFillPressed : ArcFillTile) setFill];
+    [[NSBezierPath bezierPathWithRoundedRect:chip xRadius:ArcRadiusChip yRadius:ArcRadiusChip] fill];
+}
+
+// Draws `text` so it ends at `right`; returns where the title has to stop.
+- (CGFloat)drawTrailing:(NSString *)text font:(NSFont *)font color:(NSColor *)color endingAt:(CGFloat)right row:(NSRect)row {
+    if (!text.length) return right;
+    NSDictionary *a = @{NSFontAttributeName: font, NSForegroundColorAttributeName: color};
+    NSSize s = [text sizeWithAttributes:a];
+    [text drawAtPoint:NSMakePoint(right - s.width, NSMidY(row) - s.height / 2) withAttributes:a];
+    return right - s.width - ArcSpace4;
 }
 
 - (void)drawSymbol:(NSImage *)sym in:(NSRect)r tint:(NSColor *)tint {
@@ -147,11 +152,12 @@
 - (BOOL)canBecomeMainWindow { return NO; }
 @end
 
+// Near-opaque on purpose (ArcPanelTint): see its note in ArcStyle.m.
 @implementation TweakTintView
 - (BOOL)isOpaque { return NO; }
 - (NSView *)hitTest:(NSPoint)p { return nil; }
 - (void)drawRect:(NSRect)r {
-    [dyn(0.11, 0.94, 0.98, 0.94) setFill];
+    [ArcPanelTint() setFill];
     NSRectFillUsingOperation(r, NSCompositingOperationSourceOver);
 }
 @end

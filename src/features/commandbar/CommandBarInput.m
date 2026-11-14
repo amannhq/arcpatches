@@ -17,6 +17,17 @@
     }];
 }
 
+- (void)showSuggestionsForCurrentPage {
+    NSString *q = self.typed ?: @"";
+    __weak typeof(self) weakSelf = self;
+    [self.sources suggestionsForPage:q max:kMaxRows done:^(NSArray<TweakItem *> *items) {
+        typeof(self) s = weakSelf;
+        if (![s.typed isEqualToString:q]) return;   // typing took over
+        s.shownQuery = q;
+        [s showItems:items];
+    }];
+}
+
 - (void)showItems:(NSArray<TweakItem *> *)items {
     self.results.items = items;
     [self layoutForRows:MIN(kMaxRows, items.count)];
@@ -24,6 +35,11 @@
 }
 
 - (void)updateFieldIcon {
+    // The palette's search row always shows the magnifying glass; the editor shows the site.
+    if (self.mode == TweakCommandBarNewTab) {
+        self.fieldIcon.image = ArcSymbol(@"magnifyingglass", ArcPaletteSearchIcon, NSFontWeightRegular, @"Search");
+        return;
+    }
     TweakItem *top = self.results.selected >= 0 ? self.results.items[self.results.selected] : nil;
     NSImage *img = top ? [self iconForItem:top] : nil;
     // While typing, show the site the field will open: its inline completion, or the address typed.

@@ -88,7 +88,8 @@ void TweakHandoffInstall(void);       // "Use Passkeys in Original Dia…"
 void TweakSiteIconsInstall(void);     // the command bar's own copy of site favicons
 BOOL TweakPaletteOpen(NSWindow *window);          // ⌘T: Dia's editor centred, commits open a new tab
 void TweakPaletteEditorClosed(NSWindow *window);
-BOOL TweakCommandBarShow(NSWindow *window, BOOL newTab);
+BOOL TweakCommandBarShow(NSWindow *window, BOOL newTab);   // ⌘T palette, or ⌘L editor at the content's top
+BOOL TweakCommandBarShowEditor(NSWindow *window, NSRect pillInWindow);   // ⌘L editor dropped from the URL pill
 TweakCommandBarStyle TweakCommandBarCurrentStyle(void);
 NSString *TweakPatchVersion(void);
 void TweakHealthWrite(void);

@@ -1,26 +1,25 @@
 // Private to the command bar: its views (CommandBarView.m) and its controller
-// (CommandBar.m, with typing and activation in CommandBarInput.m).
+// (CommandBar.m, with typing and activation in CommandBarInput.m, placement and
+// motion in CommandBarLayout.m).
 #import "Common.h"
 #import "CommandSources.h"
+#import "ArcStyle.h"
 
 typedef NS_ENUM(NSInteger, TweakCommandBarMode) { TweakCommandBarNewTab, TweakCommandBarCurrentTab };
 
-static const CGFloat kWidth = 760;
-static const CGFloat kInputHeight = 64;
-static const CGFloat kRowHeight = 44;
-static const CGFloat kListInset = 8;
 static const NSUInteger kMaxRows = 8;
 
-static inline NSColor *dyn(CGFloat dw, CGFloat da, CGFloat lw, CGFloat la) {
-    return [NSColor colorWithName:nil dynamicProvider:^NSColor *(NSAppearance *a) {
-        BOOL dark = [[a bestMatchFromAppearancesWithNames:@[NSAppearanceNameAqua, NSAppearanceNameDarkAqua]] isEqualToString:NSAppearanceNameDarkAqua];
-        return dark ? [NSColor colorWithWhite:dw alpha:da] : [NSColor colorWithWhite:lw alpha:la];
-    }];
-}
+// Two layouts share one panel: the ⌘T palette, centred over the web content, and the
+// ⌘L editor, dropped down from the sidebar's URL pill. All values come from ArcStyle.
+typedef struct {
+    CGFloat inputHeight;   // the field's row
+    CGFloat rowHeight;
+    CGFloat rowGap;
+    CGFloat listInset;     // around the rows
+    BOOL editor;
+} TweakBarMetrics;
 
-/// Secondary text in the bar (URLs, "— Search Google", shortcuts, inactive "Switch to Tab").
-/// Tuned to ~6.4:1 contrast on the bar in both dark and light mode (macOS's tertiary label was ~2:1).
-static inline NSColor *detailColor(void) { return dyn(1, 0.58, 0, 0.64); }
+TweakBarMetrics TweakBarMetricsFor(BOOL editor);
 
 #pragma mark - Views
 
@@ -34,6 +33,7 @@ static inline NSColor *detailColor(void) { return dyn(1, 0.58, 0, 0.64); }
 @property (nonatomic, copy) NSArray<TweakItem *> *items;
 @property (nonatomic) NSInteger selected;
 @property (nonatomic, weak) id<TweakResultsViewDelegate> delegate;
+@property (nonatomic) TweakBarMetrics metrics;
 @end
 
 @interface TweakCommandPanel : NSPanel
@@ -61,19 +61,33 @@ static inline NSColor *detailColor(void) { return dyn(1, 0.58, 0, 0.64); }
 @property (nonatomic, copy) NSString *completionText;   // the field with the inline completion accepted
 @property (nonatomic, copy) NSString *completionURL;    // where that goes
 @property (nonatomic, copy) NSString *shownQuery;       // the query the listed results belong to
+@property (nonatomic) NSRect anchor;               // screen: the pill (editor) or the web content (palette)
+@property (nonatomic) BOOL pinnedToPill;           // the editor covers a pill rather than the content's top
+@property (nonatomic) NSUInteger showGeneration;   // a newer show cancels an older fade-out
 @end
 
 @interface TweakCommandBar ()
 + (instancetype)shared;
-- (void)showInWindow:(NSWindow *)window mode:(TweakCommandBarMode)mode;
-- (void)layoutForRows:(NSUInteger)rows;
+- (void)showInWindow:(NSWindow *)window mode:(TweakCommandBarMode)mode anchor:(NSRect)anchor pinned:(BOOL)pinned;
 - (void)close;
 @end
+
+// Placement, sizing and appear/dismiss motion (CommandBarLayout.m).
+@interface TweakCommandBar (Layout)
+- (void)applyStyleForMode;
+- (void)layoutForRows:(NSUInteger)rows;
+- (void)animateIn;
+- (void)fadeOut;
+@end
+
+// The web content's frame on screen (all visible panes, without the sidebar), else the window's content.
+NSRect TweakCommandBarContentRect(NSWindow *window);
 
 // Typing, completion and activation (CommandBarInput.m).
 @interface TweakCommandBar (Input)
 - (void)runQuery;
 - (void)showItems:(NSArray<TweakItem *> *)items;
 - (void)updateFieldIcon;
+- (void)showSuggestionsForCurrentPage;
 - (void)activateRow:(NSInteger)row forceNewTab:(BOOL)forceNewTab;
 @end

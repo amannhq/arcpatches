@@ -135,8 +135,8 @@ NSColor *TweakPillFill(CGFloat darkAlpha, CGFloat lightAlpha) {
 - (void)forceRefresh { if (self.showingFeedback) return; self.currentURL = nil; self.label.stringValue = @""; [self refresh]; }
 
 - (BOOL)openEditor {
-    if (TweakCommandBarCurrentStyle() == TweakCommandBarStyleNative) return TweakCommandBarShow(self.window, NO);
     NSRect anchor = [self.pill convertRect:self.pill.bounds toView:nil];
+    if (TweakCommandBarCurrentStyle() == TweakCommandBarStyleNative) return TweakCommandBarShowEditor(self.window, anchor);
     return TweakNavBarOpenEditor(self.window, anchor);
 }
 
