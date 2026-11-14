@@ -1,7 +1,7 @@
-// arcpatches's own command bar: an Arc-style palette over the window that finds
-// open tabs, history, bookmarks, Dia's menu commands, chrome:// pages, or searches.
-//   ⌘T          new-tab mode (results open in a new tab)
-//   ⌘L / pill   current-tab mode, pre-filled with the current URL
+// arcpatches's own command bar: an Arc-style palette that finds open tabs, history,
+// bookmarks, Dia's menu commands, chrome:// pages, or searches.
+//   ⌘T          new-tab mode, centred over the web content (results open in a new tab)
+//   ⌘L / pill   current-tab mode: drops down from the URL pill, pre-filled with the URL
 #import "CommandBarInternal.h"
 #import "Features.h"
 #import "Browser.h"
@@ -19,7 +19,7 @@
     if (!(self = [super init])) return nil;
     _sources = [TweakCommandSources new];
 
-    _panel = [[TweakCommandPanel alloc] initWithContentRect:NSMakeRect(0, 0, kWidth, kInputHeight)
+    _panel = [[TweakCommandPanel alloc] initWithContentRect:NSMakeRect(0, 0, ArcPaletteWidth, ArcPaletteSearchHeight)
                                                styleMask:NSWindowStyleMaskBorderless | NSWindowStyleMaskFullSizeContentView
                                                  backing:NSBackingStoreBuffered defer:YES];
     _panel.opaque = NO;
@@ -36,10 +36,8 @@
     _background.blendingMode = NSVisualEffectBlendingModeBehindWindow;
     _background.state = NSVisualEffectStateActive;
     _background.wantsLayer = YES;
-    _background.layer.cornerRadius = 16;
-    _background.layer.cornerCurve = kCACornerCurveContinuous;
+    ArcRound(_background.layer, ArcRadiusPopover);
     _background.layer.masksToBounds = YES;
-    _background.layer.borderWidth = 1;
     _panel.contentView = _background;
 
     TweakTintView *tint = [[TweakTintView alloc] initWithFrame:_background.bounds];
@@ -47,23 +45,24 @@
     [_background addSubview:tint];
 
     _fieldIcon = [[NSImageView alloc] initWithFrame:NSZeroRect];
-    _fieldIcon.symbolConfiguration = [NSImageSymbolConfiguration configurationWithPointSize:18 weight:NSFontWeightRegular];
-    _fieldIcon.contentTintColor = NSColor.secondaryLabelColor;
+    _fieldIcon.imageScaling = NSImageScaleProportionallyDown;
+    _fieldIcon.contentTintColor = ArcIconColor(YES);
     [_background addSubview:_fieldIcon];
 
     _field = [[NSTextField alloc] initWithFrame:NSZeroRect];
     _field.bezeled = NO;
     _field.drawsBackground = NO;
     _field.focusRingType = NSFocusRingTypeNone;
-    _field.font = [NSFont systemFontOfSize:22 weight:NSFontWeightMedium];
-    _field.placeholderString = @"Search or enter URL";
+    _field.placeholderString = @"Search or Enter URL...";
     _field.cell.scrollable = YES;
     _field.cell.wraps = NO;
     _field.delegate = self;
     [_background addSubview:_field];
 
     _divider = [[NSBox alloc] initWithFrame:NSZeroRect];
-    _divider.boxType = NSBoxSeparator;
+    _divider.boxType = NSBoxCustom;
+    _divider.borderWidth = 0;
+    _divider.fillColor = ArcHairline();
     [_background addSubview:_divider];
 
     _results = [[TweakResultsView alloc] initWithFrame:NSZeroRect];
@@ -74,19 +73,16 @@
 
 #pragma mark Showing
 
-- (void)showInWindow:(NSWindow *)window mode:(TweakCommandBarMode)mode {
+- (void)showInWindow:(NSWindow *)window mode:(TweakCommandBarMode)mode anchor:(NSRect)anchor pinned:(BOOL)pinned {
     if (!window) return;
     if (self.panel.isVisible) [self close];
+    self.showGeneration++;
     self.host = window;
     self.mode = mode;
+    self.anchor = anchor;
+    self.pinnedToPill = pinned;
     self.panel.appearance = window.effectiveAppearance;
-    // HUD material is always dark; use the light popover material in light mode so text stays readable.
-    BOOL dark = [[window.effectiveAppearance bestMatchFromAppearancesWithNames:@[NSAppearanceNameAqua, NSAppearanceNameDarkAqua]]
-                 isEqualToString:NSAppearanceNameDarkAqua];
-    self.background.material = dark ? NSVisualEffectMaterialHUDWindow : NSVisualEffectMaterialPopover;
-    [self.background.effectiveAppearance performAsCurrentDrawingAppearance:^{
-        self.background.layer.borderColor = dyn(1, 0.12, 0, 0.10).CGColor;
-    }];
+    [self applyStyleForMode];
     [self.sources prepareForWindow:window];
 
     NSString *initial = @"";
@@ -99,6 +95,7 @@
     self.completionText = nil;
     self.completionURL = nil;
     self.shownQuery = nil;
+    self.results.items = @[];
     [self layoutForRows:0];
     [window addChildWindow:self.panel ordered:NSWindowAbove];
     [self.panel makeKeyAndOrderFront:nil];
@@ -106,42 +103,29 @@
     // The system highlight (e.g. a light accent) under white text was unreadable in dark mode.
     if ([self.field.currentEditor isKindOfClass:NSTextView.class])
         ((NSTextView *)self.field.currentEditor).selectedTextAttributes = @{
-            NSBackgroundColorAttributeName: dyn(1, 0.24, 0, 0.14),
+            NSBackgroundColorAttributeName: ArcTextSelection(),
             NSForegroundColorAttributeName: NSColor.labelColor,
         };
     [self.field.currentEditor selectAll:nil];
-    // Current-tab mode starts with the URL selected and no list (like Arc's ⌘L).
-    if (mode == TweakCommandBarNewTab) [self runQuery];
-    else [self showItems:@[]];
-}
-
-- (void)layoutForRows:(NSUInteger)rows {
-    NSWindow *w = self.host;
-    NSRect wf = w.frame;
-    CGFloat width = MIN(kWidth, NSWidth(wf) - 80);
-    CGFloat listH = rows ? rows * kRowHeight + kListInset * 2 : 0;
-    CGFloat height = kInputHeight + (rows ? 1 + listH : 0);
-    CGFloat top = NSMaxY(wf) - NSHeight(wf) * 0.20;  // about a fifth of the way down
-    [self.panel setFrame:NSMakeRect(NSMidX(wf) - width / 2, top - height, width, height) display:YES];
-
-    self.fieldIcon.frame = NSMakeRect(22, height - kInputHeight / 2 - 12, 24, 24);
-    self.field.frame = NSMakeRect(58, height - kInputHeight / 2 - 15, width - 58 - 22, 30);
-    self.divider.hidden = rows == 0;
-    self.divider.frame = NSMakeRect(0, height - kInputHeight - 1, width, 1);
-    self.results.frame = NSMakeRect(0, 0, width, listH);
+    [self updateFieldIcon];
+    // ⌘L starts with the URL selected and suggestions for the page you're on, like Arc.
+    // Both list their first rows synchronously, so the panel appears at its height.
+    if (mode == TweakCommandBarNewTab || !initial.length) [self runQuery];
+    else [self showSuggestionsForCurrentPage];
+    [self animateIn];
 }
 
 - (void)close {
     [self.host removeChildWindow:self.panel];
-    [self.panel orderOut:nil];
+    [self fadeOut];
     [self.host makeKeyAndOrderFront:nil];
 }
 
 - (void)windowDidResignKey:(NSNotification *)n {
     // Clicking outside closes it, like Arc; the window that took key keeps it.
-    if (!self.panel.isVisible) return;
+    if (!self.panel.isVisible || self.panel.ignoresMouseEvents) return;
     [self.host removeChildWindow:self.panel];
-    [self.panel orderOut:nil];
+    [self fadeOut];
 }
 
 #pragma mark Results delegate
@@ -157,9 +141,21 @@
 
 #pragma mark - Public
 
+static BOOL isBrowserWindow(NSWindow *w) { return w && [NSStringFromClass(w.class) isEqualToString:kDiaPlatformWindowClass]; }
+
 BOOL TweakCommandBarShow(NSWindow *window, BOOL newTab) {
-    if (!window || ![NSStringFromClass(window.class) isEqualToString:kDiaPlatformWindowClass]) return NO;
-    [[TweakCommandBar shared] showInWindow:window mode:newTab ? TweakCommandBarNewTab : TweakCommandBarCurrentTab];
+    if (!isBrowserWindow(window)) return NO;
+    NSRect content = TweakCommandBarContentRect(window);
+    // ⌘L without a sidebar pill: drop down from the top of the web content.
+    NSRect anchor = newTab ? content
+                  : NSMakeRect(NSMinX(content) + ArcSpace2, NSMaxY(content) - ArcSpace2 - ArcPillHeight, ArcEditorMaxWidth, ArcPillHeight);
+    [[TweakCommandBar shared] showInWindow:window mode:newTab ? TweakCommandBarNewTab : TweakCommandBarCurrentTab anchor:anchor pinned:NO];
+    return YES;
+}
+
+BOOL TweakCommandBarShowEditor(NSWindow *window, NSRect pillInWindow) {
+    if (!isBrowserWindow(window) || NSIsEmptyRect(pillInWindow)) return NO;
+    [[TweakCommandBar shared] showInWindow:window mode:TweakCommandBarCurrentTab anchor:[window convertRectToScreen:pillInWindow] pinned:YES];
     return YES;
 }
 

@@ -37,6 +37,9 @@ typedef NS_ENUM(NSInteger, TweakItemKind) {
 // The site to complete inline for `text`, if any ("git" -> "github.com", "home" ->
 // "homeassistant.local:8123"), and in `url` the address it stands for, with its scheme.
 - (NSString *)completionFor:(NSString *)text inItems:(NSArray<TweakItem *> *)items url:(NSString **)url;
+// What ⌘L lists before you type: the page itself, its site's root, then open tabs and
+// history on that site. Supersedes any running query; `done` runs on main.
+- (void)suggestionsForPage:(NSString *)url max:(NSUInteger)max done:(void (^)(NSArray<TweakItem *> *items))done;
 @end
 
 // CommandHistory.m: the profile's databases.

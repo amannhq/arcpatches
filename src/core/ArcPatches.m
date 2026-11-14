@@ -41,7 +41,9 @@ static void installKeyMonitor(void) {
         BOOL native = TweakCommandBarCurrentStyle() == TweakCommandBarStyleNative;
         if (commandBar && mods == NSEventModifierFlagCommand && [key isEqualToString:@"t"] && (native ? TweakCommandBarShow(w, YES) : TweakPaletteOpen(w)))
             return nil;
-        if (commandBar && mods == NSEventModifierFlagCommand && [key isEqualToString:@"l"] && native && TweakCommandBarShow(w, NO))
+        // ⌘L drops the editor out of the sidebar's URL pill when there is one, else from the content's top.
+        if (commandBar && mods == NSEventModifierFlagCommand && [key isEqualToString:@"l"] && native &&
+            ((sidebar && TweakSidebarFocusURLBar(w)) || TweakCommandBarShow(w, NO)))
             return nil;
         if (sidebar && mods == NSEventModifierFlagCommand && [key isEqualToString:@"l"] &&
             TweakSettings.urlBarMode == TweakURLBarModeSidebar && TweakSettings.cmdLFocusesSidebar &&

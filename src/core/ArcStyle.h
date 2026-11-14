@@ -15,6 +15,7 @@ static const CGFloat ArcSidebarInset = 6;        // URL pill, favourites and tab
 
 #pragma mark - Radii (all continuous corners)
 
+static const CGFloat ArcRadiusChip = 6;          // 22-pt icon squares in palette rows
 static const CGFloat ArcRadiusSmall = 7;         // icon buttons inside the URL pill
 static const CGFloat ArcRadiusMedium = 8;        // top-row hover fill, popover tiles, footer chips
 static const CGFloat ArcRadiusPill = 10;         // the URL pill, favourite tiles
@@ -30,6 +31,26 @@ static const CGFloat ArcPillIcon = 13;
 static const CGFloat ArcPopoverWidth = 272;
 static const CGFloat ArcTileHeight = 34;         // popover action / extension tiles
 static const CGFloat ArcRowIconCircle = 30;      // popover settings rows
+static const CGFloat ArcFaviconSize = 16;        // site icons in lists and fields
+static const CGFloat ArcChipSize = 22;           // rounded square behind a row's action icon
+
+#pragma mark - Command palette (⌘T) and URL editor (⌘L)
+
+static const CGFloat ArcPaletteWidth = 520;
+static const CGFloat ArcPaletteMargin = 24;      // kept clear on each side of the web content
+static const CGFloat ArcPaletteTopFraction = 0.30;   // top edge, down from the content's top
+static const CGFloat ArcPaletteSearchHeight = 52;
+static const CGFloat ArcPaletteSearchIcon = 15;  // magnifying glass point size
+static const CGFloat ArcPaletteSearchInset = 18; // its leading inset
+static const CGFloat ArcPaletteRowHeight = 34;
+static const CGFloat ArcPaletteRowGap = 6;
+static const CGFloat ArcRowTitleShare = 0.6;     // most a title takes when a "— detail" follows
+static const CGFloat ArcPaletteAppearScale = 0.98;   // grows from this when it appears
+static const CGFloat ArcEditorWidthRatio = 1.55; // editor width per point of sidebar width
+static const CGFloat ArcEditorMinWidth = 300;
+static const CGFloat ArcEditorMaxWidth = 420;
+static const CGFloat ArcEditorRowHeight = 44;
+static const CGFloat ArcEditorPopoverInset = 0;  // Dia's editor popover: frame offset from the pill
 
 #pragma mark - Type (system font)
 
@@ -38,6 +59,10 @@ NSFont *ArcFontRowTitle(void);                   // 13 medium
 NSFont *ArcFontRowSubtitle(void);                // 11 regular
 NSFont *ArcFontSectionHeader(void);              // 12 semibold
 NSFont *ArcFontChip(void);                       // 12 medium: "Secure", "Copied"
+NSFont *ArcFontPaletteField(void);               // 17 regular: the palette's search field
+NSFont *ArcFontPaletteRow(void);                 // 14 medium: palette and editor row titles
+NSFont *ArcFontPaletteDetail(void);              // 13 regular: "— github.com" after a title
+NSFont *ArcFontAccessory(void);                  // 13 medium: "Switch to Tab"
 
 #pragma mark - Colour
 
@@ -53,6 +78,10 @@ NSColor *ArcFillColor(ArcFill fill);
 NSColor *ArcIconColor(BOOL enabled);             // secondary label, or tertiary when disabled
 NSColor *ArcTextSecondary(void);
 NSColor *ArcHairline(void);                      // popover dividers
+NSColor *ArcTextTertiary(void);                  // row details at a readable ~6:1 on panels
+NSColor *ArcPanelTint(void);                     // near-opaque wash over a panel's blur
+NSColor *ArcPanelBorder(void);                   // a floating panel's hairline edge
+NSColor *ArcTextSelection(void);                 // selected text in our fields
 
 #pragma mark - Motion
 

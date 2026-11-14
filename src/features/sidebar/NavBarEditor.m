@@ -4,20 +4,23 @@
 // pill instead.
 #import "NavBarInternal.h"
 #import "Browser.h"
+#import "ArcStyle.h"
 
 static __weak NSWindow *gAnchorWindow;
 static NSRect gAnchorRect;   // window coordinates
 static BOOL gAnchorSeen;
 static NSTimeInterval gAnchorTime;
 static void (*origPopoverSetFrame)(id, SEL, NSRect);
-static const CGFloat kEditorWidth = 680;
 
 static NSRect anchoredFrame(NSView *popover, NSRect proposed) {
     NSView *sv = popover.superview;
     NSRect a = [sv convertRect:gAnchorRect fromView:nil];
-    CGFloat inset = 6;  // the editor's own padding around its text row
+    CGFloat inset = ArcEditorPopoverInset;   // the popover's top-left sits on the anchor's (covering the pill)
     CGFloat x = NSMinX(a) - inset;
-    CGFloat w = MIN(kEditorWidth, NSWidth(sv.bounds) - x - 16);
+    // From the pill: about 1.55× the sidebar (the pill plus its inset each side), like Arc.
+    // A wider anchor (the ⌘T palette) keeps its own width. Never past the window.
+    CGFloat editor = MIN(ArcEditorMaxWidth, MAX(ArcEditorMinWidth, (NSWidth(a) + 2 * ArcSidebarInset) * ArcEditorWidthRatio));
+    CGFloat w = MIN(MAX(NSWidth(a), editor), NSMaxX(sv.bounds) - x - ArcSpace2);
     CGFloat h = NSHeight(proposed);
     // Drop the space of a hidden bottom toolbar (AI controls hidden by the privacy
     // module), but only while Dia's proposed height still includes it.
@@ -28,7 +31,7 @@ static NSRect anchoredFrame(NSView *popover, NSRect proposed) {
         if (h - chrome >= NSMaxY(toolbar.frame) - 1) h -= NSHeight(toolbar.frame);
     }
     CGFloat y = sv.isFlipped ? NSMinY(a) - inset : NSMaxY(a) + inset - h;
-    return NSMakeRect(x, y, MAX(w, NSWidth(a)), h);
+    return NSMakeRect(x, y, w, h);
 }
 
 static void hookedPopoverSetFrame(NSView *self, SEL _cmd, NSRect frame) {

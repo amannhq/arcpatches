@@ -142,4 +142,62 @@ static double matchScore(NSArray<NSString *> *words, NSString *title, NSString *
     return nil;
 }
 
+#pragma mark - Before typing (⌘L)
+
+static NSString *trimmedKey(NSString *url) { return [url stringByTrimmingCharactersInSet:[NSCharacterSet characterSetWithCharactersInString:@"/"]]; }
+
+static BOOL onSite(NSString *url, NSString *site) {
+    NSString *h = [NSURL URLWithString:url].host.lowercaseString;
+    return h && ([h isEqualToString:site] || [h hasSuffix:[@"." stringByAppendingString:site]]);
+}
+
+- (void)suggestionsForPage:(NSString *)url max:(NSUInteger)max done:(void (^)(NSArray<TweakItem *> *))done {
+    NSUInteger gen = ++_generation;
+    NSMutableArray<TweakItem *> *items = [NSMutableArray array];
+    // The page you're on, under its tab's title.
+    TweakItem *page = [TweakItem new];
+    page.kind = TweakItemHistory;
+    page.url = url;
+    page.symbol = @"globe";
+    for (TweakItem *t in _tabs) if ([t.url isEqualToString:url]) { page.title = t.title; break; }
+    page.title = page.title.length ? page.title : url;
+    [items addObject:page];
+
+    // Then the site's root, keeping http and the port.
+    NSURLComponents *c = [NSURLComponents componentsWithString:url];
+    NSString *host = c.host.lowercaseString;
+    if (!host.length || !c.scheme.length) { done(items); return; }
+    NSString *site = [host hasPrefix:@"www."] ? [host substringFromIndex:4] : host;
+    NSString *port = c.port ? [@":" stringByAppendingString:c.port.stringValue] : @"";
+    NSString *rootURL = [NSString stringWithFormat:@"%@://%@%@/", c.scheme.lowercaseString, host, port];
+    if (![trimmedKey(rootURL) isEqualToString:trimmedKey(url)]) {
+        TweakItem *root = [TweakItem new];
+        root.kind = TweakItemHistory;
+        root.url = rootURL;
+        root.title = [site stringByAppendingString:port];
+        root.symbol = @"globe";
+        [items addObject:root];
+    }
+
+    done([items copy]);   // shown at once; same-site rows follow
+
+    // Then other open tabs and history on the same site, most visited first.
+    NSArray<TweakItem *> *tabs = _tabs;
+    dispatch_async(_queue, ^{
+        if (gen != self->_generation) return;
+        NSMutableArray<TweakItem *> *more = [NSMutableArray array];
+        for (TweakItem *t in tabs) if (onSite(t.url, site)) [more addObject:t];
+        for (TweakItem *h in [self historyFor:@[site]]) if (onSite(h.url, site)) [more addObject:h];
+        NSMutableSet *seen = [NSMutableSet set];
+        for (TweakItem *it in items) [seen addObject:trimmedKey(it.url)];
+        for (TweakItem *it in more) {
+            if (items.count >= max) break;
+            if ([seen containsObject:trimmedKey(it.url)]) continue;
+            [seen addObject:trimmedKey(it.url)];
+            [items addObject:it];
+        }
+        dispatch_async(dispatch_get_main_queue(), ^{ if (gen == self->_generation) done(items); });
+    });
+}
+
 @end

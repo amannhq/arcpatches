@@ -8,6 +8,10 @@ NSFont *ArcFontRowTitle(void) { return [NSFont systemFontOfSize:13 weight:NSFont
 NSFont *ArcFontRowSubtitle(void) { return [NSFont systemFontOfSize:11 weight:NSFontWeightRegular]; }
 NSFont *ArcFontSectionHeader(void) { return [NSFont systemFontOfSize:12 weight:NSFontWeightSemibold]; }
 NSFont *ArcFontChip(void) { return [NSFont systemFontOfSize:12 weight:NSFontWeightMedium]; }
+NSFont *ArcFontPaletteField(void) { return [NSFont systemFontOfSize:17 weight:NSFontWeightRegular]; }
+NSFont *ArcFontPaletteRow(void) { return [NSFont systemFontOfSize:14 weight:NSFontWeightMedium]; }
+NSFont *ArcFontPaletteDetail(void) { return [NSFont systemFontOfSize:13 weight:NSFontWeightRegular]; }
+NSFont *ArcFontAccessory(void) { return [NSFont systemFontOfSize:13 weight:NSFontWeightMedium]; }
 
 #pragma mark - Colour
 
@@ -33,6 +37,18 @@ NSColor *ArcFillColor(ArcFill fill) {
 NSColor *ArcIconColor(BOOL enabled) { return enabled ? NSColor.secondaryLabelColor : NSColor.tertiaryLabelColor; }
 NSColor *ArcTextSecondary(void) { return NSColor.secondaryLabelColor; }
 NSColor *ArcHairline(void) { return [NSColor.separatorColor colorWithAlphaComponent:0.6]; }
+
+static NSColor *grey(CGFloat darkWhite, CGFloat darkAlpha, CGFloat lightWhite, CGFloat lightAlpha) {
+    return [NSColor colorWithName:nil dynamicProvider:^NSColor *(NSAppearance *a) {
+        return isDark(a) ? [NSColor colorWithWhite:darkWhite alpha:darkAlpha] : [NSColor colorWithWhite:lightWhite alpha:lightAlpha];
+    }];
+}
+// macOS's tertiary label measured ~2:1 on the palette; this is ~6.4:1 in both modes.
+NSColor *ArcTextTertiary(void) { return grey(1, 0.58, 0, 0.64); }
+// The blur alone takes on the page behind it: over a white page the dark palette went light grey.
+NSColor *ArcPanelTint(void) { return grey(0.11, 0.94, 0.98, 0.94); }
+NSColor *ArcPanelBorder(void) { return grey(1, 0.12, 0, 0.10); }
+NSColor *ArcTextSelection(void) { return grey(1, 0.24, 0, 0.14); }
 
 #pragma mark - Motion
 
