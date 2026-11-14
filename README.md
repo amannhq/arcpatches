@@ -2,7 +2,7 @@
 
 # ArcPatches
 
-**Arc's sidebar and workflow, patched into the browser you use now.**
+**Arc's sidebar, in Dia.**
 
 [![CI](https://github.com/amannhq/arcpatches/actions/workflows/ci.yml/badge.svg)](https://github.com/amannhq/arcpatches/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/amannhq/arcpatches?include_prereleases)](https://github.com/amannhq/arcpatches/releases)
@@ -13,13 +13,9 @@
 
 </div>
 
-Arc is going away. Its successor, Dia, is fast and polished but leaves out much of what made Arc Arc.
-ArcPatches brings those parts back: the URL bar in the sidebar, a full-window page, the `⌘T` command bar and Arc's shortcuts.
-It does this by patching your own copy of the browser on your Mac. Nothing of the browser is downloaded or redistributed.
-
-> [!WARNING]
-> ArcPatches is unofficial and is not affiliated with or endorsed by The Browser Company.
-> Patching an app may go against its terms of use. Read [Security and trade-offs](#security-and-trade-offs) before installing.
+ArcPatches adds Arc's sidebar to Dia: the URL bar at the top of the sidebar, full-window pages, the `⌘T` command bar and Arc's shortcuts.
+It patches the copy of Dia on your Mac. Nothing of Dia is downloaded or redistributed, and the original comes back in one click.
+Read [Security and trade-offs](#security-and-trade-offs) before installing.
 
 <sub>The top row, URL pill, site controls, ⌘T bar and ⌘L editor in these images are rendered from ArcPatches' own view code with demo data (`tools/screenshots/`). The window buttons, favourites and tabs around them are drawn to stand in for Dia's own sidebar.</sub>
 
