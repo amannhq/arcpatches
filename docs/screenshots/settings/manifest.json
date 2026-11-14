@@ -1,0 +1,148 @@
+{
+  "defaultScale" : 2,
+  "fps" : 30,
+  "items" : [
+    {
+      "key" : "arcpatches.urlBarMode",
+      "note" : "on: In sidebar. off: Top (Dia default), Dia's own bar drawn as a generic stand-in.",
+      "off" : "urlBarMode-off.png",
+      "on" : "urlBarMode-on.png",
+      "title" : "URL bar position"
+    },
+    {
+      "demo" : "demo-pill-hover.png",
+      "key" : "arcpatches.sidebarPillButtons",
+      "off" : "sidebarPillButtons-off.png",
+      "on" : "sidebarPillButtons-on.png",
+      "title" : "Copy link and site controls"
+    },
+    {
+      "key" : "arcpatches.sidebarShowsFullURL",
+      "off" : "sidebarShowsFullURL-off.png",
+      "on" : "sidebarShowsFullURL-on.png",
+      "title" : "Show full URL"
+    },
+    {
+      "demo" : "demo-reload-spin.png",
+      "key" : "arcpatches.sidebarShowsNavButtons",
+      "off" : "sidebarShowsNavButtons-off.png",
+      "on" : "sidebarShowsNavButtons-on.png",
+      "title" : "Back, forward and reload buttons"
+    },
+    {
+      "key" : "arcpatches.sidebarToggleButton",
+      "off" : "sidebarToggleButton-off.png",
+      "on" : "sidebarToggleButton-on.png",
+      "title" : "Sidebar toggle button"
+    },
+    {
+      "key" : "arcpatches.topRowProfileName",
+      "note" : "on: Dia's profile name (stand-in label) can sit under the back and forward buttons.",
+      "off" : "topRowProfileName-off.png",
+      "on" : "topRowProfileName-on.png",
+      "title" : "Profile name in top row"
+    },
+    {
+      "demo" : "demo-fullscreen-strip.png",
+      "key" : "arcpatches.hideWindowButtonsInFullScreen",
+      "note" : "hideWindowButtonsInFullScreen-on-strip.png: the title strip shown at the top edge.",
+      "off" : "hideWindowButtonsInFullScreen-off.png",
+      "on" : "hideWindowButtonsInFullScreen-on.png",
+      "title" : "Hide window buttons in full screen"
+    },
+    {
+      "demo" : "demo-palette.png",
+      "key" : "arcpatches.commandBarStyle",
+      "note" : "on: ArcPatches (Arc-style). Dia's editor and Off show Dia's own UI, not rendered.",
+      "on" : "commandBarStyle-on.png",
+      "title" : "Command bar"
+    },
+    {
+      "key" : "arcpatches.cmdLFocusesSidebar",
+      "note" : "off: Dia's editor at the top, not rendered.",
+      "on" : "cmdLFocusesSidebar-on.png",
+      "title" : "⌘L opens the sidebar URL bar"
+    },
+    {
+      "key" : "arcpatches.emptyState",
+      "note" : "Not a setting: the pill with no page.",
+      "on" : "empty-state.png",
+      "title" : "No page open"
+    },
+    {
+      "demo" : "demo-copy-link.png",
+      "key" : "arcpatches.copyLink",
+      "note" : "Not a setting: clicking copy link.",
+      "title" : "Copy link feedback"
+    },
+    {
+      "key" : "arcpatches.revealOnHover",
+      "note" : "Changes when Dia's own UI shows: no ArcPatches view to render.",
+      "title" : "Reveal top bar on hover"
+    },
+    {
+      "key" : "arcpatches.topBarWhenSidebarHidden",
+      "note" : "Changes when Dia's own UI shows: no ArcPatches view to render.",
+      "title" : "Top bar while the sidebar is hidden"
+    },
+    {
+      "key" : "arcpatches.newTabPalette",
+      "note" : "Changes when Dia's own UI shows: no ArcPatches view to render.",
+      "title" : "New tab opens the palette"
+    },
+    {
+      "key" : "arcpatches.hideAI",
+      "note" : "Nothing to show: privacy, performance or keyboard.",
+      "title" : "Hide AI features"
+    },
+    {
+      "key" : "arcpatches.blockAI",
+      "note" : "Nothing to show: privacy, performance or keyboard.",
+      "title" : "Block AI services"
+    },
+    {
+      "key" : "arcpatches.blockTelemetry",
+      "note" : "Nothing to show: privacy, performance or keyboard.",
+      "title" : "Block telemetry"
+    },
+    {
+      "key" : "arcpatches.disableOnDeviceAI",
+      "note" : "Nothing to show: privacy, performance or keyboard.",
+      "title" : "Turn off on-device AI"
+    },
+    {
+      "key" : "arcpatches.noBackgroundNetworking",
+      "note" : "Nothing to show: privacy, performance or keyboard.",
+      "title" : "Disable background networking"
+    },
+    {
+      "key" : "arcpatches.rendererProcessLimit",
+      "note" : "Nothing to show: privacy, performance or keyboard.",
+      "title" : "Renderer process limit"
+    },
+    {
+      "key" : "arcpatches.extraShortcuts",
+      "note" : "Nothing to show: privacy, performance or keyboard.",
+      "title" : "Extra shortcuts"
+    },
+    {
+      "key" : "arcpatches.profileNumberMods",
+      "note" : "Nothing to show: privacy, performance or keyboard.",
+      "title" : "Switch to profile 1–9"
+    },
+    {
+      "key" : "arcpatches.arcShortcut.copyURL",
+      "note" : "Nothing to show: privacy, performance or keyboard.",
+      "title" : "Arc shortcut: Copy URL"
+    },
+    {
+      "key" : "arcpatches.arcShortcut.copyMarkdown",
+      "note" : "Nothing to show: privacy, performance or keyboard.",
+      "title" : "Arc shortcut: Copy URL as Markdown"
+    }
+  ],
+  "loop" : true,
+  "scales" : {
+    "demo-palette.png" : 1
+  }
+}

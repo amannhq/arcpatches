@@ -1,14 +1,20 @@
 // Dev tool: renders README screenshots of ArcPatches' own UI from the real view code,
-// offscreen, in dark mode at 2x, with generic demo content (no personal data, no
-// third-party logos, no browser running). The site-controls data source is replaced
-// by demo data (shots-data.m), so nothing is read from a browser profile.
+// offscreen, in dark mode at 2x, with demo content: public sites and their favicons, no
+// personal data, no browser running. The site-controls data source is replaced by demo
+// data (shots-data.m), so nothing is read from a browser profile. frame.swift puts the
+// panels, solid as in the app, on its printed backdrop.
 //
+// From the repo root (fetch-icons.sh downloads favicons into build/shot-icons, git-ignored;
+// without them the icons fall back to letter tiles):
+//   tools/screenshots/fetch-icons.sh
 //   mkdir -p build && clang -fobjc-arc -framework AppKit -framework QuartzCore -lsqlite3 -Isrc/core -Isrc/browsers/dia \
 //     tools/screenshots/shots*.m $(find src -name '*.m' ! -name ArcPatches.m ! -name SiteControlsData.m) \
 //     -o build/shots && build/shots build/shots-raw
-//   swift tools/screenshots/frame.swift build/shots-raw docs/screenshots
+//   swiftc -O -parse-as-library tools/screenshots/frame.swift tools/screenshots/frame-settings.swift \
+//     tools/screenshots/backdrop.swift -o build/frame && build/frame build/shots-raw docs/screenshots
 //
-// Raw output: palette.png, editor.png, settings.png, plus shots-sidebar.m's renders.
+// Raw output: palette.png, editor.png, settings.png, shots-sidebar.m's renders, and settings/
+// (shots-settings.m) and anim/ (shots-anim.m) for the website's per-setting examples.
 #import "shots.h"
 #import "../../src/features/commandbar/CommandBarInternal.h"
 
@@ -28,6 +34,50 @@ NSImage *ShotLetterIcon(NSString *letter, NSInteger color, CGFloat size) {
         return YES;
     }];
 }
+
+// Mostly-dark favicons (GitHub, Next.js) vanish on dark panels: like a browser, give them a light backing.
+static BOOL isDark(NSImage *img) {
+    NSBitmapImageRep *rep = [[NSBitmapImageRep alloc] initWithBitmapDataPlanes:NULL pixelsWide:16 pixelsHigh:16 bitsPerSample:8
+        samplesPerPixel:4 hasAlpha:YES isPlanar:NO colorSpaceName:NSCalibratedRGBColorSpace bytesPerRow:0 bitsPerPixel:0];
+    [NSGraphicsContext saveGraphicsState];
+    NSGraphicsContext.currentContext = [NSGraphicsContext graphicsContextWithBitmapImageRep:rep];
+    [img drawInRect:NSMakeRect(0, 0, 16, 16)];
+    [NSGraphicsContext restoreGraphicsState];
+    CGFloat lum = 0, weight = 0;
+    for (NSInteger y = 0; y < 16; y++) for (NSInteger x = 0; x < 16; x++) {
+        NSColor *c = [[rep colorAtX:x y:y] colorUsingColorSpace:NSColorSpace.sRGBColorSpace];
+        lum += (0.3 * c.redComponent + 0.59 * c.greenComponent + 0.11 * c.blueComponent) * c.alphaComponent;
+        weight += c.alphaComponent;
+    }
+    return weight > 0 && lum / weight < 0.22;
+}
+
+NSImage *ShotSiteIcon(NSString *domain, CGFloat size) {
+    NSString *path = [NSString stringWithFormat:@"build/shot-icons/%@.png", domain];
+    NSImage *fav = [[NSImage alloc] initWithContentsOfFile:path];
+    if (!fav) return ShotLetterIcon([domain substringToIndex:1].uppercaseString, (NSInteger)(domain.length % 8), size);
+    BOOL backing = isDark(fav);
+    return [NSImage imageWithSize:NSMakeSize(size, size) flipped:NO drawingHandler:^BOOL(NSRect r) {
+        NSRect inner = r;
+        NSBezierPath *tile = [NSBezierPath bezierPathWithRoundedRect:r xRadius:size / 4 yRadius:size / 4];
+        [tile addClip];   // square favicons with their own backgrounds get the same soft corners
+        if (backing) {
+            [[NSColor colorWithWhite:0.96 alpha:1] setFill];
+            [tile fill];
+            inner = NSInsetRect(r, size * 0.14, size * 0.14);
+        }
+        NSGraphicsContext.currentContext.imageInterpolation = NSImageInterpolationHigh;
+        [fav drawInRect:inner];
+        return YES;
+    }];
+}
+
+NSString *ShotHost(NSString *url) {
+    NSString *host = [NSURL URLWithString:url].host;
+    return [host hasPrefix:@"www."] ? [host substringFromIndex:4] : host;
+}
+
+NSColor *ShotPanelColor(void) { return [NSColor colorWithSRGBRed:0.12 green:0.12 blue:0.13 alpha:1]; }
 
 void ShotWritePNG(NSView *v, NSString *path) {
     [v layoutSubtreeIfNeeded];
@@ -67,10 +117,7 @@ NSView *ShotCard(NSSize size, NSColor *fill, CGFloat radius, BOOL border) {
 @end
 @implementation DemoDelegate
 - (NSImage *)iconForItem:(TweakItem *)item {
-    if ([item.url containsString:@"docs.example.dev"]) return ShotLetterIcon(@"D", 2, ArcFaviconSize);
-    if ([item.url containsString:@"mail.example.com"]) return ShotLetterIcon(@"I", 0, ArcFaviconSize);
-    if ([item.url containsString:@"example.com"]) return ShotLetterIcon(@"E", 1, ArcFaviconSize);
-    return nil;
+    return [item.url hasPrefix:@"https://"] ? ShotSiteIcon(ShotHost(item.url), ArcFaviconSize) : nil;
 }
 - (void)resultsView:(TweakResultsView *)v activate:(NSInteger)row {}
 @end
@@ -91,7 +138,7 @@ static NSView *commandBar(BOOL editor, CGFloat width, NSString *typed, NSString 
     CGFloat listH = n ? 2 * m.listInset + n * m.rowHeight + (n - 1) * m.rowGap : 0;
     CGFloat line = n && !editor ? 0.5 : 0;   // a hairline at 2x
     CGFloat height = m.inputHeight + line + listH, mid = m.inputHeight / 2;   // flipped: the field row on top
-    NSView *panel = ShotCard(NSMakeSize(width, height), [NSColor colorWithSRGBRed:0.11 green:0.11 blue:0.115 alpha:1], ArcRadiusPopover, YES);
+    NSView *panel = ShotCard(NSMakeSize(width, height), ShotPanelColor(), ArcRadiusPopover, NO);
 
     CGFloat iconX = editor ? ArcSpace3 : ArcPaletteSearchInset;
     NSImageView *fieldIcon = [NSImageView imageViewWithImage:icon ?: ArcSymbol(@"magnifyingglass", ArcPaletteSearchIcon, NSFontWeightRegular, nil)];
@@ -124,31 +171,35 @@ static NSView *commandBar(BOOL editor, CGFloat width, NSString *typed, NSString 
     return panel;
 }
 
-static void palette(NSString *dir) {
+NSView *ShotPalette(NSInteger highlighted, NSInteger rows) {
     NSArray *items = @[
-        item(TweakItemTab, @"Getting started", @"Switch to Tab", @"https://docs.example.dev/start", @"square.on.square"),
-        item(TweakItemHistory, @"API reference", nil, @"https://docs.example.dev/reference/api", @"globe"),
-        item(TweakItemSearch, @"doc", @"Search Google", nil, @"magnifyingglass"),
+        item(TweakItemTab, @"Next.js Docs", @"Switch to Tab", @"https://nextjs.org/docs", @"square.on.square"),
+        item(TweakItemHistory, @"vercel/next.js", nil, @"https://github.com/vercel/next.js", @"globe"),
+        item(TweakItemSearch, @"next", @"Search Google", nil, @"magnifyingglass"),
         item(TweakItemCommand, @"Duplicate Tab", @"⇧⌘D", nil, @"plus.square.on.square"),
         item(TweakItemPage, @"Downloads", nil, @"chrome://downloads", @"arrow.down.circle"),
-        item(TweakItemHistory, @"Document settings", nil, @"https://example.com/account/documents", @"globe"),
+        item(TweakItemHistory, @"Next steps", nil, @"https://developer.apple.com/tutorials/swiftui", @"globe"),
     ];
-    NSView *bar = commandBar(NO, 640, @"doc", @"s.example.dev", nil, items);
-    ShotWritePNG(bar, [dir stringByAppendingPathComponent:@"palette.png"]);
+    NSView *bar = commandBar(NO, 640, @"next", @"js.org", nil, [items subarrayWithRange:NSMakeRange(0, MIN(rows, items.count))]);
+    ((TweakResultsView *)bar.subviews.lastObject).selected = highlighted;
+    return bar;
 }
 
-static void editor(NSString *dir) {
+static void palette(NSString *dir) { ShotWritePNG(ShotPalette(0, 6), [dir stringByAppendingPathComponent:@"palette.png"]); }
+
+NSView *ShotEditor(void) {
     NSArray *items = @[
-        item(TweakItemHistory, @"Getting started", nil, @"https://docs.example.dev/start", @"globe"),
-        item(TweakItemHistory, @"docs.example.dev", nil, @"https://docs.example.dev/", @"globe"),
-        item(TweakItemTab, @"API reference", @"Switch to Tab", @"https://docs.example.dev/reference/api", @"square.on.square"),
-        item(TweakItemHistory, @"Changelog", nil, @"https://docs.example.dev/changelog", @"globe"),
-        item(TweakItemHistory, @"Install guide", nil, @"https://docs.example.dev/install", @"globe"),
+        item(TweakItemHistory, @"Next.js Docs", nil, @"https://nextjs.org/docs", @"globe"),
+        item(TweakItemHistory, @"nextjs.org", nil, @"https://nextjs.org/", @"globe"),
+        item(TweakItemTab, @"Layouts and Pages", @"Switch to Tab", @"https://nextjs.org/docs/app/getting-started/layouts-and-pages", @"square.on.square"),
+        item(TweakItemHistory, @"Installation", nil, @"https://nextjs.org/docs/app/getting-started/installation", @"globe"),
+        item(TweakItemHistory, @"Next.js Blog", nil, @"https://nextjs.org/blog", @"globe"),
     ];
     CGFloat width = MIN(ArcEditorMaxWidth, MAX(ArcEditorMinWidth, 240 * ArcEditorWidthRatio));   // from a 240-pt sidebar
-    NSView *bar = commandBar(YES, width, @"", @"https://docs.example.dev/start", ShotLetterIcon(@"D", 2, ArcFaviconSize), items);
-    ShotWritePNG(bar, [dir stringByAppendingPathComponent:@"editor.png"]);
+    return commandBar(YES, width, @"", @"https://nextjs.org/docs", ShotSiteIcon(@"nextjs.org", ArcFaviconSize), items);
 }
+
+static void editor(NSString *dir) { ShotWritePNG(ShotEditor(), [dir stringByAppendingPathComponent:@"editor.png"]); }
 
 #pragma mark - Settings pane
 
@@ -175,6 +226,8 @@ int main(int argc, char **argv) {
             settings(dir);
             ShotSidebar(dir);
             ShotSiteControls(dir);
+            ShotSettings([dir stringByAppendingPathComponent:@"settings"]);
+            ShotAnimations([dir stringByAppendingPathComponent:@"anim"]);
         }];
         printf("wrote renders to %s\n", dir.UTF8String);
     }
