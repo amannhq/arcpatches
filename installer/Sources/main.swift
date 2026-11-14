@@ -130,6 +130,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
         menu.addItem(.separator())
         menu.addItem(item("Settings…", ",") { $0.showWindow() })
         menu.addItem(item("ArcPatches on GitHub", "") { _ in NSWorkspace.shared.open(URL(string: "https://github.com/\(SelfUpdater.repo)")!) })
+        let uninstall = item("Uninstall ArcPatches…", "") { $0.c.confirmUninstall() }
+        uninstall.isEnabled = c.busy == nil
+        menu.addItem(uninstall)
         menu.addItem(item("Quit ArcPatches", "q") { _ in NSApp.terminate(nil) })
     }
 
@@ -153,7 +156,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
 }
 
 // Diagnostics: ArcPatches.app/Contents/MacOS/ArcPatches --status | --patch | --background-check | ...
-let cliFlags: Set<String> = ["--status", "--browser", "--patch", "--update-from", "--background-check", "--background-mode", "--make-icon", "--restore", "--mode", "--help"]
+let cliFlags: Set<String> = ["--status", "--browser", "--patch", "--update-from", "--background-check", "--background-mode", "--make-icon", "--restore", "--mode", "--uninstall", "--help"]
 if let flag = CommandLine.arguments.dropFirst().first, cliFlags.contains(flag) {
     let engine = PatchEngine(resources: Bundle.main.resourceURL!)
     var finished = false
@@ -195,11 +198,13 @@ if let flag = CommandLine.arguments.dropFirst().first, cliFlags.contains(flag) {
                 guard CommandLine.arguments.count > 2, let m = PatchMode(rawValue: CommandLine.arguments[2]) else { print("usage: --mode inPlace|copy"); break }
                 try engine.switchMode(to: m)
                 print("Mode: \(PatchEngine.mode.rawValue)")
+            case "--uninstall":
+                for line in try Uninstaller.run(engine: engine) { print(line) }
             case "--patch":
                 try engine.patch()
                 print("Patched: \(PatchEngine.version(PatchEngine.destination) ?? "?")")
             default:
-                print("usage: ArcPatches [--status | --browser <id> | --patch | --restore | --mode inPlace|copy | --background-check | --background-mode on|off]")
+                print("usage: ArcPatches [--status | --browser <id> | --patch | --restore | --mode inPlace|copy | --uninstall | --background-check | --background-mode on|off]")
             }
         } catch {
             print("error: \(error.localizedDescription)")

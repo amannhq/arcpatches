@@ -151,7 +151,7 @@ final class Controller: ObservableObject {
     }
 
     /// Runs an engine job off the main thread, showing `label` while it works.
-    private func run(_ label: String, _ job: @escaping @Sendable (PatchEngine) throws -> Void, then: @escaping (Bool) -> Void) {
+    func run(_ label: String, _ job: @escaping @Sendable (PatchEngine) throws -> Void, then: @escaping (Bool) -> Void) {
         guard busy == nil else { return }
         busy = label
         onChange?()

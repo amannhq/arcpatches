@@ -68,7 +68,37 @@ done < <(awk '/ id: "/ { match($0, /id: "[^"]+"/); id = substr($0, RSTART + 5, R
               /features: \[("|\])/ { match($0, /features: \[[^]]*\]/); f = substr($0, RSTART + 11, RLENGTH - 12); gsub(/[" ]/, "", f); print id ":" f }' \
               "$ROOT/installer/Sources/Browsers.swift")
 pass "companion's browser list matches what the features declare"
-# 7. Optional: the browser classes src/ looks up by name exist in the installed Dia.
+
+# 7. An interrupted swap (killed between its two moves) is undone by any reader, here
+#    --status, unless a patch holds the lock. Temp paths only (ARCPATCHES_*), never ~/Applications.
+APPS="$WORK/swap/apps"; ASIDE="$APPS/.Dia.app.arcpatches-old"
+mkdir -p "$ASIDE/Contents" "$WORK/swap/support"
+printf '<?xml version="1.0" encoding="UTF-8"?>\n<plist version="1.0"><dict><key>CFBundleVersion</key><string>1</string></dict></plist>\n' > "$ASIDE/Contents/Info.plist"
+swapStatus() { ARCPATCHES_DIA_PATH="$APPS/Dia.app" ARCPATCHES_SUPPORT_DIR="$WORK/swap/support" "$WORK/ArcPatches" --status -browser dia -patchMode inPlace >/dev/null; }
+perl -e 'use Fcntl ":flock"; open(F, ">>", $ARGV[0]) or die; flock(F, LOCK_EX) or die; $| = 1; print "locked\n"; sleep 5' "$WORK/swap/support/patch.lock" > "$WORK/swap/held" &
+HOLDER=$!
+for _ in $(seq 50); do [ -s "$WORK/swap/held" ] && break; sleep 0.1; done
+swapStatus
+kill "$HOLDER" 2>/dev/null; wait "$HOLDER" 2>/dev/null || true
+[ ! -e "$APPS/Dia.app" ] && [ -d "$ASIDE" ] || { echo "FAIL swap recovered while a patch held the lock"; exit 1; }
+swapStatus
+[ -f "$APPS/Dia.app/Contents/Info.plist" ] && [ ! -e "$ASIDE" ] || { echo "FAIL interrupted swap not recovered by --status"; exit 1; }
+pass "an interrupted swap is recovered on status, but not under a running patch"
+
+# 8. Pure helpers: the copy shortcuts' URL cleaning and Markdown links.
+clang -fobjc-arc -Wall -Werror -framework Foundation -I"$ROOT/src/features/shortcuts" -o "$WORK/cleanurl" \
+    "$ROOT/tests/cleanurl.m" "$ROOT/src/features/shortcuts/CleanURL.m"
+if ! "$WORK/cleanurl" 2>"$WORK/cleanurl.log"; then cat "$WORK/cleanurl.log"; echo "FAIL clean URL / Markdown link"; exit 1; fi
+pass "clean URL drops tracking parameters only; Markdown links escape titles and URLs"
+
+# 9. Dev tools (tools/**/*.m) still compile, so they can't rot. Syntax only: most need a live browser to run.
+while IFS= read -r f; do
+    clang -fsyntax-only -fobjc-arc -Wno-deprecated-declarations -I"$ROOT/src/core" -I"$ROOT/src/browsers/dia" -I"$ROOT/src" "$f" \
+        || { echo "FAIL $f doesn't compile"; exit 1; }
+done < <(find "$ROOT/tools" -name '*.m' | sort)
+pass "dev tools compile"
+
+# 10. Optional: the browser classes src/ looks up by name exist in the installed Dia.
 # Reads its binaries' strings only; skipped where there is no Dia (CI).
 if [ -d /Applications/Dia.app ]; then
     if ! "$ROOT/scripts/check-classes.sh" /Applications/Dia.app > "$WORK/classes.txt"; then

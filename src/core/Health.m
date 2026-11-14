@@ -30,7 +30,9 @@ static BOOL hasScriptingWindows(void) {
 static NSDictionary *diaChecks(void) {
     return @{
         @"URL bar hiding": @(NSClassFromString(kDiaContentPaneClass) && NSClassFromString(kDiaNavigationBarClass)),
-        @"Sidebar URL bar": @(TweakFindClass(kDiaSidebarRootPrefix, kDiaSidebarRootSuffix) != nil),
+        // The bar sits between the container's header and its FlippedView body.
+        @"Sidebar URL bar": @(TweakFindClass(kDiaSidebarRootPrefix, kDiaSidebarRootSuffix) != nil
+                              && NSClassFromString(kDiaSidebarHeaderClass) && NSClassFromString(kDiaFlippedViewClass)),
         @"Settings pane": @(hasMethod(kDiaPreferencesListClass, @selector(tableView:viewForTableColumn:row:))),
         @"Command bar": @(hasScriptingWindows()),
         @"Tab sorting": @(TweakTabsAvailable()),
@@ -39,6 +41,10 @@ static NSDictionary *diaChecks(void) {
         @"Web engine blocking": @(hasMethod(kDiaAppConfigurationClass, @selector(argv))),
         @"Hide AI features": @(NSClassFromString(kDiaSidebarFooterClass) && NSClassFromString(kDiaEditorToolbarClass)),
         @"On-device AI off": @(hasMethod(kDiaAIServiceClass, @selector(initialize:callback:))),
+        // toprow: each part turns off on its own, so each gets a line.
+        @"Sidebar toggle button": @(hasMethod(kDiaSidebarHeaderClass, @selector(layout))),
+        @"Full-screen window buttons": @(hasMethod(kDiaWindowStandardButtonsClass, @selector(intrinsicContentSize))),
+        @"Top row profile name": @(TweakFindClass(kDiaSidebarRootPrefix, kDiaProfileIndicatorSuffix) != nil),
     };
 }
 

@@ -33,7 +33,7 @@ int main(void) {
         CHECK([TweakBrowserSupportDir(@"ardia") hasSuffix:@"/Application Support/arcpatches/ardia"]);
 
         const TweakFeature *all[] = {&TweakFeaturePrivacy, &TweakFeaturePerformance, &TweakFeatureTabs, &TweakFeatureSidebar,
-                                     &TweakFeaturePreferences, &TweakFeatureCommandBar, &TweakFeatureShortcuts};
+                                     &TweakFeaturePreferences, &TweakFeatureCommandBar, &TweakFeatureShortcuts, &TweakFeatureTopRow};
         for (size_t i = 0; i < sizeof all / sizeof all[0]; i++) {
             CHECK(TweakFeatureSupports(all[i], @"dia"));
             CHECK(!TweakFeatureSupports(all[i], @"chrome"));

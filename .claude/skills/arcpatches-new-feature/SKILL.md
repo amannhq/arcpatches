@@ -5,7 +5,7 @@ description: Checklist for adding a new ArcPatches feature folder under src/feat
 
 # Adding a feature
 
-Read `README.md` ("Project layout") and one small existing feature first. `src/features/tabs/` and `src/features/performance/` are good examples. Sibling branches often edit the shared files at the same time, so keep every shared-file edit small and additive: append lines and don't reorder.
+Read the "Project layout" section of `CONTRIBUTING.md` and one small existing feature first. `src/features/tabs/` and `src/features/performance/` are good examples. Sibling branches often edit the shared files at the same time, so keep every shared-file edit small and additive: append lines and don't reorder.
 
 ## Checklist
 
@@ -29,5 +29,5 @@ Read `README.md` ("Project layout") and one small existing feature first. `src/f
 7. **Health entry.** In `src/core/Health.m`, add one line to `checks`, such as `@"Foo": @(<the classes/methods the feature needs exist>)`, using the same runtime lookups the feature uses. The installer app shows this list, and a `false` asks the user for attention.
 8. **Public API.** If other modules call into the feature, declare it in `Common.h` under "Modules". Otherwise keep it `static`.
 9. **Tests.** `./tests/run.sh` must pass, and it builds with `-Werror`. Pure logic (parsing, ranking, URL handling) should get a test that runs without a browser. Never launch the browser to test. See the `arcpatches-build-test` skill.
-10. **Docs.** Add a bullet under "What you get" in `README.md` if the feature is user-visible. Add a line to the top `CHANGELOG.md` section.
+10. **Docs.** Add a bullet under "Features" in `README.md` if the feature is user-visible, and a row to the matrix in `docs/browsers.md` (plus the feature id in `installer/Sources/Browsers.swift` for each browser it supports; `tests/run.sh` checks the two agree). Add a line to the top `CHANGELOG.md` section.
 11. **Live-only assumptions.** List them in the PR or report, for example: "hook fires when X", "view is placed at Y", "selector signature is Z". Static checks cannot confirm these.

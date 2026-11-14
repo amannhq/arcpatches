@@ -2,6 +2,7 @@
 // Switches to Hidden mode, opens Dia's command bar (what clicking the URL does),
 // cancels it, and dumps the pane's children before/after to /tmp/arcpatches-gap.txt.
 #import <AppKit/AppKit.h>
+#import <objc/message.h>
 #include <stdlib.h>
 
 static NSMutableString *out;

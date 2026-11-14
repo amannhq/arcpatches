@@ -93,6 +93,7 @@ final class PatchEngine: Sendable {
 
     func status() -> PatchStatus {
         let b = Self.browser
+        Self.recoverSwapIfIdle(b)   // an interrupted swap may have left the browser aside
         guard let src = Self.info(b.source) else { return PatchStatus(state: .diaMissing) }
         if b.mode == .inPlace {
             if !Self.isPatched(b.source) {
