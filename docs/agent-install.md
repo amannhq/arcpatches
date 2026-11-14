@@ -61,9 +61,9 @@ Shell variables may not survive between your commands, so repeat the two `AP=` l
 
 ## 4. Quit Dia
 
-Look at the first line of `--status`. It ends with `Dia running: true` or `Dia running: false`.
+Look at the first line of `--status`. It contains `running: true|false` (the app ArcPatches will replace) and ends with `Dia running: true|false`.
 
-If Dia is running, ask me to quit it myself (⌘Q in Dia) and wait until I say it's done. Only if I explicitly ask you to quit it for me, run `osascript -e 'tell application "Dia" to quit'`. Never force-quit. Run `"$AP" --status` again and continue only when it says `Dia running: false`.
+If either is `true`, ask me to quit Dia myself (⌘Q in Dia) and wait until I say it's done. Only if I explicitly ask you to quit it for me, run `osascript -e 'tell application "Dia" to quit'`. Never force-quit. Run `"$AP" --status` again and continue only when it shows both `running: false` and `Dia running: false`.
 
 ## 5. Patch
 
@@ -96,7 +96,8 @@ Write settings only while Dia is quit, with `defaults write company.thebrowser.d
 | `hideWindowButtonsInFullScreen` | bool | YES | In full screen, the top row starts with the toggle, like Arc |
 | `arcShortcut.copyURL` | bool | YES | ⌘⇧C copies the URL without tracking parameters |
 | `arcShortcut.copyMarkdown` | bool | YES | ⌘⇧⌥C copies a Markdown link to the page |
-| `extraShortcuts` | bool | NO | Extra keys for tidying tabs and switching profiles (⌃1…⌃9) |
+| `extraShortcuts` | bool | NO | Extra keys: sort and group tabs by domain (⌃⌥S, ⌃⌥G), next and previous profile (⌃⌥→, ⌃⌥←) |
+| `profileNumberMods` | int | 262144 | Keys for "switch to profile 1–9" (needs `extraShortcuts`): 262144 ⌃1…⌃9, 786432 ⌃⌥, 1310720 ⌃⌘, 0 none |
 | `hideAI` | bool | YES | Hide Dia's AI chat entry points |
 | `disableOnDeviceAI` | bool | YES | Don't start Dia's local AI process (needs `hideAI`) |
 | `blockAI` | bool | NO | Block Dia's AI and Gemini hosts |
