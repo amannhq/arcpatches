@@ -5,6 +5,8 @@
 // Dia's editor always navigates the current tab, so while the palette is open we
 // intercept that load and open the URL in a new tab instead.
 #import "Common.h"
+#import "Features.h"
+#import "Browser.h"
 #import <objc/runtime.h>
 
 NSString *const TweakKeyNewTabPalette = @"arcpatches.newTabPalette";
@@ -69,14 +71,14 @@ static void hookedNewTabMouseDown(NSView *self, SEL _cmd, NSEvent *e) {
 }
 
 void TweakPaletteInstall(void) {
-    Class nav = NSClassFromString(@"ArcWebContentsNavigationController");
+    Class nav = NSClassFromString(kDiaNavigationControllerClass);
     SEL loadSel = @selector(load:initiatorOrigin:transition:fromAddressBar:typedWithHttpScheme:);
     // Without DynamicPopover the editor's close can't be seen, and the next address-bar load would be taken for the palette.
-    if (!TweakFindClass(@"_TtCC14DynamicPopover", @"RootView")) NSLog(@"[arcpatches] DynamicPopover root not found; new-tab palette inactive");
+    if (!TweakFindClass(kDiaPopoverRootPrefix, kDiaPopoverRootSuffix)) NSLog(@"[arcpatches] DynamicPopover root not found; new-tab palette inactive");
     else if (nav && class_getInstanceMethod(nav, loadSel)) origLoad = (void *)TweakHook(nav, loadSel, (IMP)hookedLoad);
     else NSLog(@"[arcpatches] navigation load not found; new-tab palette inactive");
 
-    Class row = NSClassFromString(@"TabList.NewTabCellView");
+    Class row = NSClassFromString(kDiaNewTabCellClass);
     if (row) origNewTabMouseDown = (void *)TweakHook(row, @selector(mouseDown:), (IMP)hookedNewTabMouseDown);
 }
 

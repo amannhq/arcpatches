@@ -37,7 +37,7 @@ jobs:
         run: ./tests/run.sh
 
       - name: Build ArcPatches.app
-        run: ./companion/build.sh --no-install
+        run: ./installer/build.sh --no-install
 
       - name: Sign with Developer ID and notarize
         if: env.HAS_DEVELOPER_ID == 'true'
@@ -68,10 +68,10 @@ jobs:
           ARCPATCHES_UPDATE_PRIVATE_KEY: ${{ secrets.ARCPATCHES_UPDATE_PRIVATE_KEY }}
         run: |
           test -n "$ARCPATCHES_UPDATE_PRIVATE_KEY" || { echo "ARCPATCHES_UPDATE_PRIVATE_KEY secret is not set"; exit 1; }
-          test -s companion/update-public-key.txt || { echo "companion/update-public-key.txt is missing"; exit 1; }
+          test -s installer/update-public-key.txt || { echo "installer/update-public-key.txt is missing"; exit 1; }
           ditto -c -k --keepParent build/ArcPatches.app ArcPatches.zip
           swift tools/update-key.swift sign ArcPatches.zip > ArcPatches.zip.sig
-          swift tools/update-key.swift verify ArcPatches.zip ArcPatches.zip.sig "$(cat companion/update-public-key.txt)"
+          swift tools/update-key.swift verify ArcPatches.zip ArcPatches.zip.sig "$(cat installer/update-public-key.txt)"
           shasum -a 256 ArcPatches.zip > ArcPatches.zip.sha256
 
       - name: Publish the release

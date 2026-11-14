@@ -6,6 +6,8 @@
 // Web contents are tracked as Dia creates or restores them (with the ArcBrowser that
 // owns them); scripting supplies which tabs belong to the active profile and are pinned.
 #import "Common.h"
+#import "Features.h"
+#import "Browser.h"
 #import <objc/message.h>
 
 static NSMapTable *gDelegates;   // ArcBrowser -> its delegate
@@ -45,7 +47,7 @@ static void hookedDidRestore(id self, SEL _cmd, id browser, id webContents, id s
 void TweakTabsInstall(void) {
     gDelegates = [NSMapTable weakToWeakObjectsMapTable];
     gOwners = [NSMapTable weakToWeakObjectsMapTable];
-    Class browser = NSClassFromString(@"ArcBrowser"), chromium = NSClassFromString(@"ADK.ChromiumBrowser");
+    Class browser = NSClassFromString(kDiaBrowserClass), chromium = NSClassFromString(kDiaChromiumBrowserClass);
     if (!browser || !chromium) { NSLog(@"[arcpatches] ArcBrowser not found; tab sorting inactive"); return; }
     origSetDelegate = (void *)TweakHook(browser, @selector(setDelegate:), (IMP)hookedSetDelegate);
     origTakeOwnership = (void *)TweakHook(browser, @selector(takeOwnershipOfWebContents:), (IMP)hookedTakeOwnership);
@@ -56,7 +58,7 @@ void TweakTabsInstall(void) {
 
 BOOL TweakTabsAvailable(void) {
     return origSetDelegate && origDidCreate && origDidRestore &&
-        [NSClassFromString(@"ADK.ChromiumBrowser") instancesRespondToSelector:@selector(browser:createTabGroupWithSessionIds:properties:completion:)];
+        [NSClassFromString(kDiaChromiumBrowserClass) instancesRespondToSelector:@selector(browser:createTabGroupWithSessionIds:properties:completion:)];
 }
 
 #pragma mark - Model
@@ -153,7 +155,7 @@ static void withLooseTabs(NSWindow *window, TweakTabsBlock body) {
 static NSArray *sessionIds(NSArray<TweakTab *> *tabs) { return [tabs valueForKey:@"sessionId"]; }
 
 static void createGroup(id browser, id delegate, NSArray<TweakTab *> *tabs, NSString *title, dispatch_block_t done) {
-    id props = [NSClassFromString(@"ArcTabGroupProperties") new];
+    id props = [NSClassFromString(kDiaTabGroupPropertiesClass) new];
     [props setValue:title forKey:@"title"];
     ((void (*)(id, SEL, id, id, id, id))objc_msgSend)(delegate, @selector(browser:createTabGroupWithSessionIds:properties:completion:),
         browser, sessionIds(tabs), props, ^(__unused id result) { dispatch_async(dispatch_get_main_queue(), done); });
@@ -195,3 +197,5 @@ void TweakTabsGroupByDomain(NSWindow *window) {
         next(0);
     });
 }
+
+const TweakFeature TweakFeatureTabs = {"tabs", {TWEAK_BROWSER_DIA}, TweakTabsInstall, NULL};

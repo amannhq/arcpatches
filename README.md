@@ -39,7 +39,7 @@ To leave `/Applications/Dia.app` untouched, untick **Patch Dia directly**. ArcPa
 ```bash
 xcode-select --install
 git clone https://github.com/amannhq/arcpatches.git && cd arcpatches
-./companion/build.sh --launch   # the ArcPatches app
+./installer/build.sh --launch   # the ArcPatches app
 ./build.sh --launch             # or just the patched browser, no app
 ./tests/run.sh                  # tests that don't need a browser
 ```
@@ -61,8 +61,10 @@ Notes:
 
 | Path | Contents |
 | --- | --- |
-| `src/` | The injected dylib: sidebar, toolbar, command bar, settings pane, privacy, performance, health |
-| `companion/` | The ArcPatches menu bar app: patch engine, UI, background job, self-updater |
+| `src/core/` | The injected dylib's browser-agnostic runtime: entry point, feature registry, hook helpers, settings, health, passkey handoff |
+| `src/browsers/dia/` | The Dia descriptor: bundle id, app path, profile folder, and the names of Dia's classes the features hook |
+| `src/features/` | One folder per feature (`sidebar`, `commandbar`, `privacy`, `performance`, `shortcuts`, `tabs`, `preferences`), each declaring the browsers it supports |
+| `installer/` | The ArcPatches menu bar app: patch engine, UI, background job, self-updater |
 | `tools/` | `insert-dylib`, release signing, and dev probes / self-tests |
 | `tests/` | Tests that run without a browser |
 | `.github/` | CI, releases, issue and PR templates |
@@ -71,7 +73,7 @@ Notes:
 
 Bump `VERSION`, add a `CHANGELOG.md` section, commit, then `git tag vX.Y.Z && git push --tags`. CI builds, signs and publishes.
 
-To set up signing once, run `./scripts/make-update-key.sh`, commit `companion/update-public-key.txt`, and store the private key with the `gh secret set` command that it prints.
+To set up signing once, run `./scripts/make-update-key.sh`, commit `installer/update-public-key.txt`, and store the private key with the `gh secret set` command that it prints.
 
 ## License
 

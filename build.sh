@@ -17,9 +17,13 @@ if pgrep -f "$DEST/Contents/MacOS/Dia" >/dev/null; then
 fi
 
 mkdir -p "$OUT"
+# Every .m under src/ (core, browsers, features); headers resolve via -I.
+SOURCES=()
+while IFS= read -r f; do SOURCES+=("$f"); done < <(find "$HERE/src" -name '*.m' | sort)
 clang -dynamiclib -arch arm64 -fobjc-arc -O2 -Wall -Wno-unused-function \
     -framework AppKit -framework QuartzCore -lsqlite3 -DARCPATCHES_VERSION="\"$(cat "$HERE/VERSION")\"" \
-    -o "$OUT/arcpatches.dylib" "$HERE"/src/*.m
+    -I"$HERE/src/core" -I"$HERE/src/browsers/dia" \
+    -o "$OUT/arcpatches.dylib" "${SOURCES[@]}"
 codesign -f -s - "$OUT/arcpatches.dylib"
 
 mkdir -p "$HOME/Applications"
