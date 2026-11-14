@@ -1,5 +1,5 @@
 // Developer aid: writes every window's view tree to
-// ~/Library/Application Support/arcpatches/views.txt when another process posts the
+// ~/Library/Application Support/arcpatches/views.txt (and menus.txt) when another process posts the
 // distributed notification below. Read-only: nothing in the browser changes.
 //   swift -e 'import Foundation; DistributedNotificationCenter.default().postNotificationName(.init("dev.amannhq.arcpatches.dump"), object: nil, userInfo: nil, deliverImmediately: true)'
 #import "Common.h"
@@ -35,7 +35,38 @@ static void dumpAll(void) {
     [out writeToFile:[dir stringByAppendingPathComponent:@"views.txt"] atomically:YES encoding:NSUTF8StringEncoding error:nil];
 }
 
+static void dumpMenu(NSMenu *menu, NSMutableString *out, int depth) {
+    for (NSMenuItem *i in menu.itemArray) {
+        if (i.isSeparatorItem) continue;
+        NSString *mods = [NSString stringWithFormat:@"%@%@%@%@",
+            i.keyEquivalentModifierMask & NSEventModifierFlagControl ? @"⌃" : @"", i.keyEquivalentModifierMask & NSEventModifierFlagOption ? @"⌥" : @"",
+            i.keyEquivalentModifierMask & NSEventModifierFlagShift ? @"⇧" : @"", i.keyEquivalentModifierMask & NSEventModifierFlagCommand ? @"⌘" : @""];
+        [out appendFormat:@"%*s%@%@%@ [%@]\n", depth * 2, "", i.title, i.keyEquivalent.length ? [@"  " stringByAppendingString:mods] : @"",
+            i.keyEquivalent.uppercaseString, i.action ? NSStringFromSelector(i.action) : @"-"];
+        if (i.submenu && depth < 4) dumpMenu(i.submenu, out, depth + 1);
+    }
+}
+
+@interface TweakDevDumpObserver : NSObject
+@end
+@implementation TweakDevDumpObserver
+- (void)dump:(NSNotification *)n {
+    dispatch_async(dispatch_get_main_queue(), ^{
+        dumpAll();
+        NSMutableString *menus = [NSMutableString string];
+        dumpMenu(NSApp.mainMenu, menus, 0);
+        NSString *dir = [NSHomeDirectory() stringByAppendingPathComponent:@"Library/Application Support/arcpatches"];
+        [menus writeToFile:[dir stringByAppendingPathComponent:@"menus.txt"] atomically:YES encoding:NSUTF8StringEncoding error:nil];
+    });
+}
+@end
+
+static TweakDevDumpObserver *gDumpObserver;
+
 void TweakDevDumpInstall(void) {
-    [NSDistributedNotificationCenter.defaultCenter addObserverForName:kDumpNotification object:nil queue:NSOperationQueue.mainQueue
-                                                           usingBlock:^(__unused NSNotification *n) { dumpAll(); }];
+    // A background app's distributed notifications are held until it's active, unless
+    // the observer asks for immediate delivery.
+    gDumpObserver = [TweakDevDumpObserver new];
+    [NSDistributedNotificationCenter.defaultCenter addObserver:gDumpObserver selector:@selector(dump:) name:kDumpNotification object:nil
+                                            suspensionBehavior:NSNotificationSuspensionBehaviorDeliverImmediately];
 }
