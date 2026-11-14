@@ -243,3 +243,28 @@ void TweakFocusTab(NSString *windowId, NSString *tabId) {
 TweakCommandBarStyle TweakCommandBarCurrentStyle(void) {
     return [NSUserDefaults.standardUserDefaults integerForKey:TweakKeyCommandBarStyle];
 }
+
+static NSMenuItem *menuItemForShortcut(NSMenu *menu, NSString *key, NSEventModifierFlags mods, NSMenu **owner) {
+    NSEventModifierFlags mask = NSEventModifierFlagCommand | NSEventModifierFlagOption | NSEventModifierFlagControl | NSEventModifierFlagShift;
+    for (NSMenuItem *i in menu.itemArray) {
+        if (i.submenu) {
+            NSMenuItem *hit = menuItemForShortcut(i.submenu, key, mods, owner);
+            if (hit) return hit;
+            continue;
+        }
+        if (![i.keyEquivalent isEqualToString:key] || (i.keyEquivalentModifierMask & mask) != mods) continue;
+        *owner = menu;
+        return i;
+    }
+    return nil;
+}
+
+BOOL TweakPerformMenuShortcut(NSString *key, NSEventModifierFlags mods) {
+    NSMenu *owner = nil;
+    NSMenuItem *item = menuItemForShortcut(NSApp.mainMenu, key, mods, &owner);
+    if (!item || !owner) return NO;
+    [owner update];   // validates the item, as opening the menu would
+    if (!item.isEnabled) return NO;
+    [owner performActionForItemAtIndex:[owner indexOfItem:item]];
+    return YES;
+}

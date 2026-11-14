@@ -88,6 +88,26 @@ void TweakChromeFade(NSView *v, BOOL shown) {
     self.image = [NSImage imageWithSystemSymbolName:symbol accessibilityDescription:self.accessibilityLabel];
 }
 
+// AppKit draws the image in a private subview; turn that view's layer about its centre.
+- (void)spinIcon {
+    if (NSWorkspace.sharedWorkspace.accessibilityDisplayShouldReduceMotion) return;
+    NSView *icon = nil;
+    for (NSView *v in self.subviews)
+        if ([NSStringFromClass(v.class) containsString:@"ImageView"]) { icon = v; break; }
+    if (!icon) return;
+    icon.wantsLayer = YES;
+    CALayer *l = icon.layer;
+    NSRect f = icon.frame;
+    l.anchorPoint = CGPointMake(0.5, 0.5);
+    l.position = CGPointMake(NSMidX(f), NSMidY(f));
+    CABasicAnimation *turn = [CABasicAnimation animationWithKeyPath:@"transform.rotation.z"];
+    turn.fromValue = @0;
+    turn.toValue = @(icon.isFlipped ? 2 * M_PI : -2 * M_PI);   // clockwise on screen
+    turn.duration = ArcSpinDuration;
+    turn.timingFunction = ArcEaseOut();
+    [l addAnimation:turn forKey:@"arcpatches.spin"];
+}
+
 - (void)setSelected:(BOOL)selected {
     if (_selected == selected) return;
     _selected = selected;

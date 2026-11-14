@@ -24,7 +24,7 @@ extern NSString *const kDiaInfoBarClass;
 extern NSString *const kDiaWebContentsHostClass;
 extern NSString *const kDiaFlippedViewClass;             // ARCUI's generic container
 extern NSString *const kDiaWindowStandardButtonsClass;   // the traffic lights in the sidebar header
-extern NSString *const kDiaToggleSidebarAction;          // selector of Dia's Hide/Show Sidebar menu item
+extern NSString *const kDiaToggleSidebarKey;             // View ▸ Auto-Hide Tabs: ⌘ + this key hides/shows the sidebar
 
 #pragma mark - Top navigation bar
 

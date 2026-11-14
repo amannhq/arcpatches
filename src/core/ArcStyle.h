@@ -31,19 +31,21 @@ static const CGFloat ArcPillIcon = 13;
 static const CGFloat ArcPopoverWidth = 272;
 static const CGFloat ArcTileHeight = 34;         // popover action / extension tiles
 static const CGFloat ArcRowIconCircle = 30;      // popover settings rows
-static const CGFloat ArcFaviconSize = 16;        // site icons in lists and fields
-static const CGFloat ArcChipSize = 22;           // rounded square behind a row's action icon
+static const CGFloat ArcFaviconSize = 18;        // site icons in lists and fields
+static const CGFloat ArcChipSize = 26;           // rounded square behind a row's action icon
 
 #pragma mark - Command palette (⌘T) and URL editor (⌘L)
 
-static const CGFloat ArcPaletteWidth = 520;
+static const CGFloat ArcPaletteWidthFraction = 0.62;   // of the web content area
+static const CGFloat ArcPaletteMinWidth = 560;
+static const CGFloat ArcPaletteMaxWidth = 760;
 static const CGFloat ArcPaletteMargin = 24;      // kept clear on each side of the web content
 static const CGFloat ArcPaletteTopFraction = 0.30;   // top edge, down from the content's top
-static const CGFloat ArcPaletteSearchHeight = 52;
-static const CGFloat ArcPaletteSearchIcon = 15;  // magnifying glass point size
-static const CGFloat ArcPaletteSearchInset = 18; // its leading inset
-static const CGFloat ArcPaletteRowHeight = 34;
-static const CGFloat ArcPaletteRowGap = 6;
+static const CGFloat ArcPaletteSearchHeight = 58;
+static const CGFloat ArcPaletteSearchIcon = 17;  // magnifying glass point size
+static const CGFloat ArcPaletteSearchInset = 20; // its leading inset
+static const CGFloat ArcPaletteRowHeight = 44;
+static const CGFloat ArcPaletteRowGap = 4;
 static const CGFloat ArcRowTitleShare = 0.6;     // most a title takes when a "— detail" follows
 static const CGFloat ArcPaletteAppearScale = 0.98;   // grows from this when it appears
 static const CGFloat ArcEditorWidthRatio = 1.55; // editor width per point of sidebar width
@@ -52,6 +54,12 @@ static const CGFloat ArcEditorMaxWidth = 420;
 static const CGFloat ArcEditorRowHeight = 44;
 static const CGFloat ArcEditorPopoverInset = 0;  // Dia's editor popover: frame offset from the pill
 
+// Arc's ⌘T palette: a share of the content width, within its limits and the margins.
+static inline CGFloat ArcPaletteWidthFor(CGFloat contentWidth) {
+    CGFloat w = MIN(ArcPaletteMaxWidth, MAX(ArcPaletteMinWidth, contentWidth * ArcPaletteWidthFraction));
+    return MIN(w, contentWidth - 2 * ArcPaletteMargin);
+}
+
 #pragma mark - Type (system font)
 
 NSFont *ArcFontURL(void);                        // 13 regular: the pill's host
@@ -59,10 +67,10 @@ NSFont *ArcFontRowTitle(void);                   // 13 medium
 NSFont *ArcFontRowSubtitle(void);                // 11 regular
 NSFont *ArcFontSectionHeader(void);              // 12 semibold
 NSFont *ArcFontChip(void);                       // 12 medium: "Secure", "Copied"
-NSFont *ArcFontPaletteField(void);               // 17 regular: the palette's search field
-NSFont *ArcFontPaletteRow(void);                 // 14 medium: palette and editor row titles
-NSFont *ArcFontPaletteDetail(void);              // 13 regular: "— github.com" after a title
-NSFont *ArcFontAccessory(void);                  // 13 medium: "Switch to Tab"
+NSFont *ArcFontPaletteField(void);               // 20 regular: the palette's search field
+NSFont *ArcFontPaletteRow(void);                 // 15 medium: palette and editor row titles
+NSFont *ArcFontPaletteDetail(void);              // 14 regular: "— github.com" after a title
+NSFont *ArcFontAccessory(void);                  // 14 medium: "Switch to Tab"
 
 #pragma mark - Colour
 
@@ -88,6 +96,7 @@ NSColor *ArcTextSelection(void);                 // selected text in our fields
 static const NSTimeInterval ArcDurationFast = 0.12;   // hover fills, icon fades
 static const NSTimeInterval ArcDurationMedium = 0.2;  // button appear/disappear, crossfades
 static const NSTimeInterval ArcFeedbackHold = 1.2;    // "Copied" stays this long
+static const NSTimeInterval ArcSpinDuration = 0.45;   // reload's turn when clicked
 CAMediaTimingFunction *ArcEaseOut(void);              // things appearing
 CAMediaTimingFunction *ArcEaseIn(void);               // things leaving
 

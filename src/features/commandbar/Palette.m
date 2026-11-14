@@ -37,7 +37,7 @@ BOOL TweakPaletteOpen(NSWindow *window) {
     if (!paletteEnabled() || !window || !origLoad) return NO;
     // Centred over the web content (not the sidebar), its top 30% of the way down: where Arc puts its palette.
     NSRect b = [window convertRectFromScreen:TweakCommandBarContentRect(window)];
-    CGFloat width = MIN(ArcPaletteWidth, NSWidth(b) - 2 * ArcPaletteMargin);
+    CGFloat width = ArcPaletteWidthFor(NSWidth(b));
     CGFloat top = NSMaxY(b) - NSHeight(b) * ArcPaletteTopFraction;
     NSRect anchor = NSMakeRect(round(NSMidX(b) - width / 2), top - ArcPillHeight, width, ArcPillHeight);
     if (!TweakNavBarOpenEditor(window, anchor)) return NO;

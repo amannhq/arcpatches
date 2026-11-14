@@ -247,6 +247,7 @@ static BOOL gNavRefreshPending;
 
 // While loading, Dia's own reload control (which TweakNavBarPerform presses) stops.
 - (void)tap:(NSButton *)sender {
+    if (sender.tag == 2 && !self.loading) [(TweakChromeButton *)sender spinIcon];   // Arc's reload turn
     TweakNavBarPerform(self.window, sender.tag);
     __weak typeof(self) weakSelf = self;
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{ [weakSelf updateState]; });

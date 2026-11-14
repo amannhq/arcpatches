@@ -69,7 +69,7 @@ NSRect TweakCommandBarContentRect(NSWindow *window) {
         if (self.pinnedToPill) width = MAX(width, NSWidth(a));   // always covers the pill
         return NSMakeRect(NSMinX(a), NSMaxY(a) - height, width, height);
     }
-    CGFloat width = MIN(ArcPaletteWidth, NSWidth(a) - 2 * ArcPaletteMargin);
+    CGFloat width = ArcPaletteWidthFor(NSWidth(a));
     CGFloat top = NSMaxY(a) - NSHeight(a) * ArcPaletteTopFraction;
     return NSMakeRect(round(NSMidX(a) - width / 2), round(top - height), width, height);
 }

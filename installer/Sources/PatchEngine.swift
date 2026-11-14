@@ -44,7 +44,8 @@ final class PatchEngine: Sendable {
     static var supportDir: URL { browser.supportDir }
     static var backup: URL { browser.backup }
     static var copyDestination: URL { browser.copyDestination }
-    static var appName: String { browser.appName }
+    /// What the user runs: the browser itself, by its own name, when patched in place.
+    static var appName: String { mode == .inPlace ? browser.name : browser.appName }
     static var targetName: String { browser.targetName }
     static var mode: PatchMode { browser.mode }
     static var destination: URL { browser.destination }
@@ -204,9 +205,10 @@ final class PatchEngine: Sendable {
             } else if b.isDia {
                 plist.removeValue(forKey: "SUEnableAutomaticChecks")   // Dia's own updater keeps working
             }                                                           // others keep their own setting
-            // Only the display name changes: Dia names its profile folder after CFBundleName,
-            // so keeping "Dia" there keeps Dia Arc on the same profile as the regular Dia.
-            plist["CFBundleDisplayName"] = b.appName
+            // Patched in place it stays the same app with the same name. Only the separate copy
+            // gets its own display name, so the two can be told apart. CFBundleName never
+            // changes: Dia names its profile folder after it, so both keep one profile.
+            if inPlace { plist.removeValue(forKey: "CFBundleDisplayName") } else { plist["CFBundleDisplayName"] = b.appName }
             plist["ArcPatchesSourceBuild"] = Self.info(pristine)?["CFBundleVersion"]
             plist["ArcPatchesPatchVersion"] = patchVersion
             guard (plist as NSDictionary).write(to: plistURL, atomically: true) else { throw PatchError.step("Writing Info.plist failed") }

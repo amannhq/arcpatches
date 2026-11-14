@@ -79,24 +79,6 @@ static BOOL copyMarkdownLink(NSWindow *w) {
     return copyText(w, TweakMarkdownLink(title, TweakCleanURL(url)), NO, @"Copied as Markdown");
 }
 
-static NSMenuItem *itemWithAction(NSMenu *menu, SEL action) {
-    for (NSMenuItem *i in menu.itemArray) {
-        if (i.action == action) return i;
-        NSMenuItem *hit = i.submenu ? itemWithAction(i.submenu, action) : nil;
-        if (hit) return hit;
-    }
-    return nil;
-}
-
-// Dia's own command, through its menu item's target when it has one.
-static BOOL toggleSidebar(NSWindow *w) {
-    SEL sel = NSSelectorFromString(@"toggleSidebar:");
-    NSMenuItem *item = itemWithAction(NSApp.mainMenu, sel);
-    id target = [NSApp targetForAction:sel to:item.target from:item];
-    if (!target) { NSLog(@"[arcpatches] nothing in this window handles toggleSidebar:; key passed to Dia"); return NO; }
-    return [NSApp sendAction:sel to:target from:item];
-}
-
 #pragma mark - Table
 
 static NSString *settingsKey(NSString *actionId) { return [@"arcpatches.arcShortcut." stringByAppendingString:actionId]; }
@@ -115,9 +97,6 @@ static NSArray<NSDictionary *> *actions(void) {
             @{@"id": @"copyMarkdown", @"key": @"c", @"mods": @(cs | NSEventModifierFlagOption), @"same": @[@"copyCurrentURLAsMarkdown:"],
               @"title": @"Copy URL as Markdown", @"detail": @"Copies [page title](URL), tracking parameters removed.",
               @"run": [NSValue valueWithPointer:copyMarkdownLink]},
-            @{@"id": @"toggleSidebar", @"key": @"s", @"mods": @(NSEventModifierFlagCommand), @"same": @[@"toggleSidebar:"],
-              @"title": @"Show or hide the sidebar", @"detail": @"Arc's ⌘S.",
-              @"run": [NSValue valueWithPointer:toggleSidebar]},
         ];
         NSMutableDictionary *defaults = [NSMutableDictionary dictionary];
         for (NSDictionary *a in all) defaults[settingsKey(a[@"id"])] = @YES;

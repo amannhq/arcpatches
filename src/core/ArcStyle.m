@@ -8,10 +8,10 @@ NSFont *ArcFontRowTitle(void) { return [NSFont systemFontOfSize:13 weight:NSFont
 NSFont *ArcFontRowSubtitle(void) { return [NSFont systemFontOfSize:11 weight:NSFontWeightRegular]; }
 NSFont *ArcFontSectionHeader(void) { return [NSFont systemFontOfSize:12 weight:NSFontWeightSemibold]; }
 NSFont *ArcFontChip(void) { return [NSFont systemFontOfSize:12 weight:NSFontWeightMedium]; }
-NSFont *ArcFontPaletteField(void) { return [NSFont systemFontOfSize:17 weight:NSFontWeightRegular]; }
-NSFont *ArcFontPaletteRow(void) { return [NSFont systemFontOfSize:14 weight:NSFontWeightMedium]; }
-NSFont *ArcFontPaletteDetail(void) { return [NSFont systemFontOfSize:13 weight:NSFontWeightRegular]; }
-NSFont *ArcFontAccessory(void) { return [NSFont systemFontOfSize:13 weight:NSFontWeightMedium]; }
+NSFont *ArcFontPaletteField(void) { return [NSFont systemFontOfSize:20 weight:NSFontWeightRegular]; }
+NSFont *ArcFontPaletteRow(void) { return [NSFont systemFontOfSize:15 weight:NSFontWeightMedium]; }
+NSFont *ArcFontPaletteDetail(void) { return [NSFont systemFontOfSize:14 weight:NSFontWeightRegular]; }
+NSFont *ArcFontAccessory(void) { return [NSFont systemFontOfSize:14 weight:NSFontWeightMedium]; }
 
 #pragma mark - Colour
 

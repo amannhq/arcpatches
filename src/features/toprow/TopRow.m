@@ -6,6 +6,7 @@
 #import "Features.h"
 #import "Browser.h"
 #import "../sidebar/ChromeButton.h"
+#import "FullScreenButtons.h"
 #import <objc/runtime.h>
 
 NSString *const TweakKeyHideWindowButtonsInFullScreen = @"arcpatches.hideWindowButtonsInFullScreen";
@@ -32,23 +33,11 @@ static BOOL gApplying;
 
 #pragma mark - Sidebar toggle
 
-static NSMenuItem *menuItemWithAction(NSMenu *menu, SEL action) {
-    for (NSMenuItem *item in menu.itemArray) {
-        if (item.action == action) return item;
-        NSMenuItem *hit = item.submenu ? menuItemWithAction(item.submenu, action) : nil;
-        if (hit) return hit;
-    }
-    return nil;
-}
-
-// Dia's menu item first (whatever its title or language), then the responder chain.
+// Dia's own View ▸ Auto-Hide Tabs, found by its shortcut (its action is a generic one).
 static void toggleSidebar(NSWindow *window) {
-    SEL action = NSSelectorFromString(kDiaToggleSidebarAction);
-    NSMenuItem *item = menuItemWithAction(NSApp.mainMenu, action);
-    if (item && [NSApp sendAction:item.action to:item.target from:item]) return;
     if (window && !window.isKeyWindow) [window makeKeyWindow];
-    if ([NSApp sendAction:action to:nil from:item]) return;
-    NSLog(@"[arcpatches] no menu item or responder handles %@; sidebar toggle did nothing", kDiaToggleSidebarAction);
+    if (!TweakPerformMenuShortcut(kDiaToggleSidebarKey, NSEventModifierFlagCommand))
+        NSLog(@"[arcpatches] no enabled ⌘%@ menu item; sidebar toggle did nothing", kDiaToggleSidebarKey.uppercaseString);
 }
 
 // The same button as back/forward/reload (hover fill, pressed state, no focus ring).
@@ -199,8 +188,17 @@ static void applyHeader(NSView *header) {
     if (gApplying || !header.window) return;
     gApplying = YES;
     NSView *buttons = TweakDescendantOfClass(header, kDiaWindowStandardButtonsClass);
-    if (buttons)
-        applyWindowButtons(buttons, [TweakSettings boolForKey:TweakKeyHideWindowButtonsInFullScreen] && isFullScreen(header.window));
+    BOOL full = isFullScreen(header.window);
+    TweakTopRowSetMinimizeAllowed(header.window, !full);
+    if (buttons) {
+        // In full screen they wait out of sight until the pointer reaches the top row.
+        TweakTopRowTrackHeader(header, ^(NSView *h) { applyHeader(h); h.needsLayout = YES; });
+        BOOL hide = full && [TweakSettings boolForKey:TweakKeyHideWindowButtonsInFullScreen] && !TweakTopRowHeaderHovered(header);
+        BOOL wasHidden = hidByUs(buttons);
+        applyWindowButtons(buttons, hide);
+        if (full && wasHidden && !hidByUs(buttons)) TweakTopRowFadeIn(buttons);
+        else if (!full && buttons.alphaValue < 1) buttons.alphaValue = 1;
+    }
     placeToggle(header, buttons);
     applyProfileName(header);
     gApplying = NO;

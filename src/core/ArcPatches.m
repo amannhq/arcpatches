@@ -53,12 +53,15 @@ static void installKeyMonitor(void) {
     }];
 }
 
-// The app menu shows "Dia Arc". CFBundleName stays "Dia" (it names the profile folder),
-// so the title is set here instead.
+// Patched in place, the browser keeps its own name. The separate copy has a display name
+// of its own ("Dia Arc"); AppKit titles the app menu from CFBundleName (which stays "Dia"
+// because it names the profile folder), so that title is set here.
 static void showPatchedName(void) {
-    NSString *title = [TweakBrowserDisplayName(TweakRunningBrowser()) stringByAppendingString:@" \u2726"];
+    NSDictionary *info = NSBundle.mainBundle.infoDictionary;
+    NSString *display = info[@"CFBundleDisplayName"], *name = info[@"CFBundleName"];
+    if (!display.length || [display isEqualToString:name]) return;
     NSMenu *appMenu = NSApp.mainMenu.itemArray.firstObject.submenu;
-    if (appMenu && ![appMenu.title isEqualToString:title]) appMenu.title = title;
+    if (appMenu && ![appMenu.title isEqualToString:display]) appMenu.title = display;
 }
 
 __attribute__((constructor)) static void init(void) {

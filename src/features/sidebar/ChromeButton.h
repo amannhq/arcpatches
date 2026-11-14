@@ -25,4 +25,5 @@ void TweakChromeFade(NSView *view, BOOL shown);
 - (void)setSymbol:(NSString *)symbol animated:(BOOL)animated;
 - (void)setLabel:(NSString *)label;      // tooltip and accessibility label
 - (void)syncHover;                        // re-reads where the pointer really is
+- (void)spinIcon;                         // one quick clockwise turn of the icon (reload)
 @end

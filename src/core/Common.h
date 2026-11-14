@@ -52,6 +52,9 @@ typedef NS_ENUM(NSInteger, TweakCommandBarStyle) {
 // Runtime helpers.
 NSView *TweakChildOfClass(NSView *parent, NSString *className);
 NSView *TweakDescendantOfClass(NSView *root, NSString *className);
+// Runs the enabled main-menu item bound to key + exactly mods (⌘, ⌥, ⌃, ⇧), the way choosing it
+// would. Dia's own commands share one generic action, so the shortcut is what identifies them.
+BOOL TweakPerformMenuShortcut(NSString *key, NSEventModifierFlags mods);
 Class TweakFindClass(NSString *prefix, NSString *suffix);
 // Replaces -[cls sel] with imp, returning the previous implementation
 // (the inherited one if cls didn't override sel).

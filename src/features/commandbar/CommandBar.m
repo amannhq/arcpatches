@@ -19,7 +19,7 @@
     if (!(self = [super init])) return nil;
     _sources = [TweakCommandSources new];
 
-    _panel = [[TweakCommandPanel alloc] initWithContentRect:NSMakeRect(0, 0, ArcPaletteWidth, ArcPaletteSearchHeight)
+    _panel = [[TweakCommandPanel alloc] initWithContentRect:NSMakeRect(0, 0, ArcPaletteMinWidth, ArcPaletteSearchHeight)
                                                styleMask:NSWindowStyleMaskBorderless | NSWindowStyleMaskFullSizeContentView
                                                  backing:NSBackingStoreBuffered defer:YES];
     _panel.opaque = NO;

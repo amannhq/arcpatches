@@ -72,7 +72,7 @@ struct ArcPatchesWindowView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text("Patch \(c.browserName) directly")
                 Text(c.patchInPlace
-                     ? "\(c.browserName) itself becomes \(PatchEngine.appName). The original is kept, so you can restore it anytime."
+                     ? "\(c.browserName) is patched in place and keeps its name and profile. The original is kept, so you can restore it anytime."
                      : "\(PatchEngine.appName) is a separate copy in ~/Applications; your regular \(c.browserName) stays untouched.")
                     .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
