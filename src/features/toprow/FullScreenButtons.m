@@ -12,6 +12,8 @@ static const NSTimeInterval kPollInterval = 0.08;   // cheap: one pointer read w
 @property (nonatomic, weak) NSWindow *owner;
 @property (nonatomic, strong) NSTimer *poll;
 @property (nonatomic) BOOL shown;
+@property (nonatomic) BOOL active;          // wanted by TopRow; polls only while the app is active
+@property (nonatomic, strong) NSArray *appObservers;
 @end
 
 @implementation TweakFullScreenStrip
@@ -31,7 +33,23 @@ static const NSTimeInterval kPollInterval = 0.08;   // cheap: one pointer read w
         b.enabled = kinds[i] != NSWindowMiniaturizeButton;
         [self addSubview:b];
     }
+    // No pointer at the top edge matters while another app is frontmost: stop polling.
+    __weak typeof(self) weakSelf = self;
+    NSNotificationCenter *nc = NSNotificationCenter.defaultCenter;
+    _appObservers = @[
+        [nc addObserverForName:NSApplicationDidResignActiveNotification object:nil queue:nil usingBlock:^(__unused NSNotification *n) {
+            [weakSelf pause];
+        }],
+        [nc addObserverForName:NSApplicationDidBecomeActiveNotification object:nil queue:nil usingBlock:^(__unused NSNotification *n) {
+            if (weakSelf.active) [weakSelf resume];
+        }],
+    ];
     return self;
+}
+
+- (void)dealloc {
+    [_poll invalidate];
+    for (id o in _appObservers) [NSNotificationCenter.defaultCenter removeObserver:o];
 }
 
 // Lights at the macOS titlebar positions: 20 pt apart, vertically centred.
@@ -72,7 +90,8 @@ static const NSTimeInterval kPollInterval = 0.08;   // cheap: one pointer read w
 // over the strip, hidden once it moves below.
 - (void)check {
     NSWindow *w = self.owner;
-    if (!w || !(w.styleMask & NSWindowStyleMaskFullScreen)) { [self setShown:NO animated:NO]; return; }
+    if (!w || !w.isVisible) { [self stop]; return; }   // closed or ordered out; TopRow restarts it on layout
+    if (!(w.styleMask & NSWindowStyleMaskFullScreen)) { [self setShown:NO animated:NO]; return; }
     NSPoint p = NSEvent.mouseLocation;
     NSRect f = w.frame;
     BOOL overWindowColumn = p.x >= NSMinX(f) && p.x <= NSMaxX(f);
@@ -83,6 +102,11 @@ static const NSTimeInterval kPollInterval = 0.08;   // cheap: one pointer read w
 }
 
 - (void)start {
+    self.active = YES;
+    if (NSApp.isActive) [self resume];
+}
+
+- (void)resume {
     if (self.poll) return;
     __weak typeof(self) weakSelf = self;
     self.poll = [NSTimer scheduledTimerWithTimeInterval:kPollInterval repeats:YES block:^(__unused NSTimer *t) { [weakSelf check]; }];
@@ -90,6 +114,11 @@ static const NSTimeInterval kPollInterval = 0.08;   // cheap: one pointer read w
 }
 
 - (void)stop {
+    self.active = NO;
+    [self pause];
+}
+
+- (void)pause {
     [self.poll invalidate];
     self.poll = nil;
     [self setShown:NO animated:NO];

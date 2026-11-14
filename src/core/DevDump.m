@@ -1,6 +1,8 @@
 // Developer aid: writes every window's view tree to
 // ~/Library/Application Support/arcpatches/views.txt (and menus.txt) when another process posts the
 // distributed notification below. Read-only: nothing in the browser changes.
+// Off unless developer tools are on (then relaunch the browser):
+//   defaults write company.thebrowser.dia arcpatches.devTools -bool YES
 //   swift -e 'import Foundation; DistributedNotificationCenter.default().postNotificationName(.init("dev.amannhq.arcpatches.dump"), object: nil, userInfo: nil, deliverImmediately: true)'
 #import "Common.h"
 #import <objc/message.h>

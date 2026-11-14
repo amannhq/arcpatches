@@ -90,6 +90,15 @@ static NSString *hostOf(NSString *url) {
     return [[labels subarrayWithRange:NSMakeRange(labels.count - MIN(keep, labels.count), MIN(keep, labels.count))] componentsJoinedByString:@"."];
 }
 
+// Dia's tab-group calls changed shape: say so once instead of throwing into Dia. Main thread.
+static void logOnce(NSString *what) {
+    static NSMutableSet *logged;
+    if (!logged) logged = [NSMutableSet set];
+    if ([logged containsObject:what]) return;
+    [logged addObject:what];
+    NSLog(@"[arcpatches] tab sorting: Dia's %@ call failed or is missing; action skipped", what);
+}
+
 typedef void (^TweakTabsBlock)(id browser, id delegate, NSArray<TweakTab *> *loose);
 
 // The window's loose tabs (not pinned, not in a group) in the active profile, per
@@ -141,24 +150,45 @@ static void withLooseTabs(NSWindow *window, TweakTabsBlock body) {
 
     for (id browser in byBrowser) {
         id delegate = [gDelegates objectForKey:browser];
-        if (![delegate respondsToSelector:@selector(browser:getAllTabGroupsWithCompletion:)]) continue;
+        if (![delegate respondsToSelector:@selector(browser:getAllTabGroupsWithCompletion:)]) { logOnce(@"getAllTabGroups"); continue; }
         NSArray *tabs = [byBrowser objectForKey:browser];
-        ((void (*)(id, SEL, id, id))objc_msgSend)(delegate, @selector(browser:getAllTabGroupsWithCompletion:), browser, ^(NSArray *groups) {
-            NSMutableSet *grouped = [NSMutableSet set];
-            for (id g in groups) [grouped addObjectsFromArray:[g valueForKey:@"tabSessionIds"] ?: @[]];
-            NSArray *loose = [tabs filteredArrayUsingPredicate:[NSPredicate predicateWithBlock:^BOOL(TweakTab *t, id b) { return ![grouped containsObject:t.sessionId]; }]];
-            dispatch_async(dispatch_get_main_queue(), ^{ body(browser, delegate, loose); });
-        });
+        @try {
+            ((void (*)(id, SEL, id, id))objc_msgSend)(delegate, @selector(browser:getAllTabGroupsWithCompletion:), browser, ^(NSArray *groups) {
+                NSMutableSet *grouped = [NSMutableSet set];
+                @try {
+                    for (id g in groups) [grouped addObjectsFromArray:[g valueForKey:@"tabSessionIds"] ?: @[]];
+                } @catch (__unused NSException *e) {   // can't tell loose tabs: leave them all
+                    dispatch_async(dispatch_get_main_queue(), ^{ logOnce(@"tabSessionIds"); });
+                    return;
+                }
+                NSArray *loose = [tabs filteredArrayUsingPredicate:[NSPredicate predicateWithBlock:^BOOL(TweakTab *t, id b) { return ![grouped containsObject:t.sessionId]; }]];
+                dispatch_async(dispatch_get_main_queue(), ^{ body(browser, delegate, loose); });
+            });
+        } @catch (__unused NSException *e) { logOnce(@"getAllTabGroups"); }
     }
 }
 
 static NSArray *sessionIds(NSArray<TweakTab *> *tabs) { return [tabs valueForKey:@"sessionId"]; }
 
+// Runs `done` only once Dia took the group; on any failure the action stops there.
 static void createGroup(id browser, id delegate, NSArray<TweakTab *> *tabs, NSString *title, dispatch_block_t done) {
-    id props = [NSClassFromString(kDiaTabGroupPropertiesClass) new];
-    [props setValue:title forKey:@"title"];
-    ((void (*)(id, SEL, id, id, id, id))objc_msgSend)(delegate, @selector(browser:createTabGroupWithSessionIds:properties:completion:),
-        browser, sessionIds(tabs), props, ^(__unused id result) { dispatch_async(dispatch_get_main_queue(), done); });
+    SEL sel = @selector(browser:createTabGroupWithSessionIds:properties:completion:);
+    Class propsClass = NSClassFromString(kDiaTabGroupPropertiesClass);
+    if (!propsClass || ![delegate respondsToSelector:sel]) { logOnce(@"createTabGroup"); return; }
+    @try {
+        id props = [propsClass new];
+        [props setValue:title forKey:@"title"];
+        ((void (*)(id, SEL, id, id, id, id))objc_msgSend)(delegate, sel,
+            browser, sessionIds(tabs), props, ^(__unused id result) { dispatch_async(dispatch_get_main_queue(), done); });
+    } @catch (__unused NSException *e) { logOnce(@"createTabGroup"); }
+}
+
+static void ungroup(id browser, id delegate, NSArray<TweakTab *> *tabs) {
+    SEL sel = @selector(browser:removeTabsFromGroupWithSessionIds:completion:);
+    if (![delegate respondsToSelector:sel]) { logOnce(@"removeTabsFromGroup"); return; }
+    @try {
+        ((void (*)(id, SEL, id, id, id))objc_msgSend)(delegate, sel, browser, sessionIds(tabs), ^(__unused id result) {});
+    } @catch (__unused NSException *e) { logOnce(@"removeTabsFromGroup"); }
 }
 
 #pragma mark - Actions
@@ -170,10 +200,7 @@ void TweakTabsSortByDomain(NSWindow *window) {
             NSComparisonResult r = [a.host localizedStandardCompare:b.host];
             return r != NSOrderedSame ? r : [a.url localizedStandardCompare:b.url];
         }];
-        createGroup(browser, delegate, sorted, @"", ^{
-            ((void (*)(id, SEL, id, id, id))objc_msgSend)(delegate, @selector(browser:removeTabsFromGroupWithSessionIds:completion:),
-                browser, sessionIds(sorted), ^(__unused id result) {});
-        });
+        createGroup(browser, delegate, sorted, @"", ^{ ungroup(browser, delegate, sorted); });
     });
 }
 
