@@ -44,6 +44,9 @@ Every feature can be switched off in **Settings → ArcPatches** inside the patc
 
 ## Install
 
+**Install with an AI agent:** paste [this prompt](docs/agent-install.md) into Claude Code, Cursor or Codex and it sets everything up, asking before it quits or removes anything.
+Every command and setting is in the [command line reference](docs/cli.md).
+
 **Requirements:** a Mac with Apple silicon, macOS 14 or later, and the browser in `/Applications`.
 
 1. Download `ArcPatches.zip` from the [latest release](https://github.com/amannhq/arcpatches/releases/latest) and move `ArcPatches.app` to Applications.
