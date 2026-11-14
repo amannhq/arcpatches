@@ -93,43 +93,62 @@ defaults read company.thebrowser.dia | grep arcpatches               # what you'
 
 The domain is the same whether Dia is patched in place or as a copy, because both keep Dia's bundle identifier.
 
-### Sidebar URL bar
+The site's [settings page](https://amannhq.github.io/arcpatches/settings/) shows each one with a picture of what it changes.
+
+### Sidebar
 
 | Key | Type | Default | Effect |
 | --- | --- | --- | --- |
-| `urlBarMode` | int | `2` | Where the address bar lives. `0` Dia's stock bar at the top, `1` hidden, `2` in the sidebar. ⌃⌘U switches between `0` and the last of the other two. |
-| `commandBarStyle` | int | `2` | What ⌘T, ⌘L and the sidebar URL bar open. `2` ArcPatches's Arc-style command bar, `1` Dia's own editor re-anchored to the sidebar, `0` Dia's defaults. |
-| `revealOnHover` | bool | `NO` | Moving the pointer to the top edge of a page shows Dia's bar. Only when `urlBarMode` isn't `0`. |
-| `cmdLFocusesSidebar` | bool | `YES` | With Dia's editor as the command bar (`commandBarStyle` `1`), ⌘L opens it at the sidebar instead of the top. |
-| `sidebarShowsFullURL` | bool | `NO` | Shows the full URL in the sidebar pill. Otherwise only the site's domain. |
-| `sidebarShowsNavButtons` | bool | `YES` | Back, forward and reload next to the window buttons. |
-| `sidebarPillButtons` | bool | `YES` | Copy-link and site-controls buttons that appear when the pointer is over the URL pill. |
-| `topBarWhenSidebarHidden` | bool | `NO` | Shows Dia's bar while the sidebar is collapsed. Off is like Arc: no URL bar until the sidebar is back. |
+| `urlBarMode` | int | `2` | **URL bar position.** `2` in the sidebar, `1` hidden, `0` Dia's stock bar at the top. ⌃⌘U switches between `0` and the last of the other two. |
+| `revealOnHover` | bool | `NO` | **Reveal top bar on hover.** Moving the pointer to the top edge of a page shows Dia's bar. Only when `urlBarMode` isn't `0`. |
+| `sidebarShowsFullURL` | bool | `NO` | **Show full URL** in the sidebar pill. Otherwise only the site's domain. |
+| `sidebarShowsNavButtons` | bool | `YES` | **Back, forward and reload buttons** next to the window buttons. Reload turns into stop while a page loads. |
+| `sidebarPillButtons` | bool | `YES` | **Copy link and site controls:** buttons that appear when the pointer is over the URL pill. |
+| `topBarWhenSidebarHidden` | bool | `NO` | **Top bar while the sidebar is hidden.** Off is like Arc: no URL bar until the sidebar is back. |
 
-### Sidebar top row
+### Top row
 
 | Key | Type | Default | Effect |
 | --- | --- | --- | --- |
-| `sidebarToggleButton` | bool | `YES` | A sidebar toggle after the window buttons. |
-| `topRowProfileName` | bool | `NO` | Keeps Dia's profile name in the sidebar header. Arc shows none. |
-| `hideWindowButtonsInFullScreen` | bool | `YES` | In full screen the top row starts with the toggle, as in Arc. |
+| `sidebarToggleButton` | bool | `YES` | **Sidebar toggle button** after the window buttons. |
+| `topRowProfileName` | bool | `NO` | **Profile name in top row.** Keeps Dia's profile name in the sidebar header. Arc shows none. |
+| `hideWindowButtonsInFullScreen` | bool | `YES` | **Hide window buttons in full screen.** The top row then starts with the toggle, as in Arc. |
+
+### Command bar
+
+| Key | Type | Default | Effect |
+| --- | --- | --- | --- |
+| `commandBarStyle` | int | `2` | **Command bar:** what ⌘T, ⌘L and the sidebar URL bar open. `2` ArcPatches's Arc-style command bar, `1` Dia's own editor re-anchored to the sidebar, `0` Dia's defaults. |
+| `cmdLFocusesSidebar` | bool | `YES` | **⌘L opens the sidebar URL bar.** With Dia's editor (`commandBarStyle` `1`), ⌘L opens it at the sidebar instead of the top. |
 
 ### Shortcuts
 
 | Key | Type | Default | Effect |
 | --- | --- | --- | --- |
-| `arcShortcut.copyURL` | bool | `YES` | ⌘⇧C copies the URL without tracking parameters (`utm_*`, `fbclid`, `gclid` and others). |
-| `arcShortcut.copyMarkdown` | bool | `YES` | ⌘⇧⌥C copies `[page title](URL)`. |
-| `extraShortcuts` | bool | `NO` | Extra keys for tidying tabs and switching profiles. Change each key in Settings → ArcPatches → Shortcuts. |
-| `profileNumberMods` | int | ⌃ | Modifiers for "switch to profile 1–9", as an `NSEvent` modifier mask: `262144` ⌃, `786432` ⌃⌥, `1310720` ⌃⌘, `0` none. Needs `extraShortcuts`. |
+| `arcShortcut.copyURL` | bool | `YES` | **Copy URL ⌘⇧C** without tracking parameters (`utm_*`, `fbclid`, `gclid` and others). |
+| `arcShortcut.copyMarkdown` | bool | `YES` | **Copy URL as Markdown ⌘⇧⌥C:** copies `[page title](URL)`. |
+| `extraShortcuts` | bool | `NO` | **Extra shortcuts** for tidying tabs and switching profiles. Change each key in Settings → ArcPatches → Shortcuts. |
+| `profileNumberMods` | int | ⌃ | **Switch to profile 1–9.** Modifiers as an `NSEvent` modifier mask: `262144` ⌃, `786432` ⌃⌥, `1310720` ⌃⌘, `0` none. Needs `extraShortcuts`. |
+| `shortcut.nextProfile` | shortcut | ⌃⌥→ | **Next profile.** Needs `extraShortcuts`. |
+| `shortcut.previousProfile` | shortcut | ⌃⌥← | **Previous profile.** Needs `extraShortcuts`. |
+| `shortcut.moveTabToNextProfile` | shortcut | ⌃⌥⇧→ | **Move tab to next profile,** taking the current tab with you. Needs `extraShortcuts`. |
+
+### Tabs
+
+| Key | Type | Default | Effect |
+| --- | --- | --- | --- |
+| `shortcut.sortTabs` | shortcut | ⌃⌥S | **Sort tabs by domain:** orders this profile's tabs by site, then title. Pinned tabs and groups stay put. Needs `extraShortcuts`. |
+| `shortcut.groupTabs` | shortcut | ⌃⌥G | **Group tabs by domain:** puts tabs from the same site (two or more) into a group named after it. Needs `extraShortcuts`. |
+
+`shortcut` keys hold a dictionary (`keyCode`, `mods`, `chars`). Change them by clicking the shortcut in Settings → ArcPatches → Shortcuts rather than with `defaults`.
 
 ### Privacy
 
 | Key | Type | Default | Effect |
 | --- | --- | --- | --- |
-| `hideAI` | bool | `YES` | Hides chat menus and shortcuts, Chats in the sidebar, the Chat button, "Chat with this tab" and page content extraction. |
-| `blockAI` | bool | `NO` | Blocks Dia's AI endpoints and Google's Gemini API. Applies after restarting the browser. |
-| `blockTelemetry` | bool | `NO` | Blocks Datadog, Sentry, Segment, LaunchDarkly events and Dia's OpenTelemetry gateway. Applies after restarting the browser. |
+| `hideAI` | bool | `YES` | **Hide AI features:** chat menus and shortcuts, Chats in the sidebar, the Chat button, "Chat with this tab" and page content extraction. |
+| `blockAI` | bool | `NO` | **Block AI services:** Dia's AI endpoints and Google's Gemini API. Applies after restarting the browser. |
+| `blockTelemetry` | bool | `NO` | **Block telemetry:** Datadog, Sentry, Segment, LaunchDarkly events and Dia's OpenTelemetry gateway. Applies after restarting the browser. |
 
 Host blocking is best effort. Use a firewall such as LuLu or Little Snitch if you need a guarantee.
 
@@ -139,15 +158,15 @@ These apply after restarting the browser.
 
 | Key | Type | Default | Effect |
 | --- | --- | --- | --- |
-| `disableOnDeviceAI` | bool | `YES` | Doesn't start Dia's local AI service process (about 40 MB). Needs `hideAI`. |
-| `rendererProcessLimit` | int | `0` | Tabs share renderer processes above this number: `0` Chromium's default, or `16`, `8`, `4`. Lower uses less memory, but one crash can take several tabs with it. |
-| `noBackgroundNetworking` | bool | `NO` | Stops Chromium's background updaters (components, field trials). May delay Safe Browsing list updates. |
+| `disableOnDeviceAI` | bool | `YES` | **Turn off on-device AI.** Doesn't start Dia's local AI service process (about 40 MB). Needs `hideAI`. |
+| `rendererProcessLimit` | int | `0` | **Renderer process limit.** Tabs share renderer processes above this number: `0` Chromium's default, or `16`, `8`, `4`. Lower uses less memory, but one crash can take several tabs with it. |
+| `noBackgroundNetworking` | bool | `NO` | **Disable background networking.** Stops Chromium's background updaters (components, field trials). May delay Safe Browsing list updates. |
 
 ### Internal keys
 
 `arcpatches.newTabPalette` is registered (default `YES`) but the current build doesn't read it: `commandBarStyle` decides what ⌘T opens.
-ArcPatches also writes `arcpatches.lastHiddenMode`, `arcpatches.handoffExplained`, `arcpatches.saved.*` and `arcpatches.shortcut.<action>` (a dictionary per shortcut).
-Leave them alone: change shortcuts in the Settings pane.
+ArcPatches also writes `arcpatches.lastHiddenMode`, `arcpatches.handoffExplained` and `arcpatches.saved.*`.
+Leave them alone.
 
 There is no developer-tools setting. To dump the view tree while developing, see the comment at the top of [`src/core/DevDump.m`](../src/core/DevDump.m).
 
