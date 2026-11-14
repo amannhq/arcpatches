@@ -35,7 +35,7 @@ NSColor *TweakPillFill(CGFloat darkAlpha, CGFloat lightAlpha) {
     [_pill addSubview:_label];
 
     _linkButton = [TweakPillIconButton buttonWithSymbol:@"link" label:@"Copy Link" target:self action:@selector(copyLink:)];
-    _siteButton = [TweakPillIconButton buttonWithSymbol:@"slider.horizontal.3" label:@"Site Controls" target:self action:@selector(siteControls:)];
+    _siteButton = [TweakPillIconButton buttonWithSymbol:@"slider.horizontal.2.square" label:@"Site Controls" target:self action:@selector(siteControls:)];
     for (NSButton *b in @[_linkButton, _siteButton]) {
         b.hidden = YES;   // hidden, not transparent: an invisible button would still take the click
         [_pill addSubview:b];
@@ -70,11 +70,26 @@ NSColor *TweakPillFill(CGFloat darkAlpha, CGFloat lightAlpha) {
     [super updateTrackingAreas];
     for (NSTrackingArea *t in self.trackingAreas) [self removeTrackingArea:t];
     [self addTrackingArea:[[NSTrackingArea alloc] initWithRect:NSZeroRect
-        options:NSTrackingMouseEnteredAndExited | NSTrackingActiveInKeyWindow | NSTrackingInVisibleRect owner:self userInfo:nil]];
+        options:NSTrackingMouseEnteredAndExited | NSTrackingMouseMoved | NSTrackingActiveAlways | NSTrackingInVisibleRect owner:self userInfo:nil]];
 }
 
-- (void)mouseEntered:(NSEvent *)e { self.hovering = YES; [self updateAppearance]; }
-- (void)mouseExited:(NSEvent *)e { self.hovering = NO; [self updateAppearance]; }
+// Dia relayouts and re-parents the sidebar often, which can drop an exit event: every
+// hover event (and every refresh) re-reads where the pointer really is.
+- (BOOL)pointerInside {
+    NSWindow *w = self.window;
+    if (!w || self.isHiddenOrHasHiddenAncestor) return NO;
+    NSPoint p = [self convertPoint:w.mouseLocationOutsideOfEventStream fromView:nil];
+    return NSPointInRect(p, self.pill.frame);
+}
+- (void)syncHover {
+    BOOL inside = [self pointerInside];
+    if (inside == self.hovering) return;
+    self.hovering = inside;
+    [self updateAppearance];
+}
+- (void)mouseMoved:(NSEvent *)e { [self syncHover]; }
+- (void)mouseEntered:(NSEvent *)e { [self syncHover]; }
+- (void)mouseExited:(NSEvent *)e { [self syncHover]; }
 - (void)mouseDown:(NSEvent *)e { [self openEditor]; }   // the buttons take their own clicks
 - (void)viewDidChangeEffectiveAppearance { [super viewDidChangeEffectiveAppearance]; [self updateAppearance]; }
 
@@ -99,6 +114,7 @@ NSColor *TweakPillFill(CGFloat darkAlpha, CGFloat lightAlpha) {
 }
 
 - (void)refresh {
+    [self syncHover];
     if (self.showingFeedback) return;   // "Copied" restores itself
     NSString *u = TweakURLForWindow(self.window);
     if ([u isEqualToString:self.currentURL] && self.label.stringValue.length) return;
@@ -152,7 +168,7 @@ NSColor *TweakPillFill(CGFloat darkAlpha, CGFloat lightAlpha) {
 
 - (instancetype)initWithFrame:(NSRect)frame {
     if (!(self = [super initWithFrame:frame])) return nil;
-    NSArray *symbols = @[@"chevron.left", @"chevron.right", @"arrow.clockwise"];
+    NSArray *symbols = @[@"arrow.left", @"arrow.right", @"arrow.clockwise"];
     NSArray *labels = @[@"Back", @"Forward", @"Reload"];
     for (NSUInteger i = 0; i < symbols.count; i++) {
         NSButton *b = [NSButton buttonWithImage:[NSImage imageWithSystemSymbolName:symbols[i] accessibilityDescription:labels[i]]
@@ -160,7 +176,7 @@ NSColor *TweakPillFill(CGFloat darkAlpha, CGFloat lightAlpha) {
         b.bordered = NO;
         b.tag = i;
         b.toolTip = labels[i];
-        b.symbolConfiguration = [NSImageSymbolConfiguration configurationWithPointSize:12 weight:NSFontWeightSemibold];
+        b.symbolConfiguration = [NSImageSymbolConfiguration configurationWithPointSize:14 weight:NSFontWeightRegular];
         b.contentTintColor = NSColor.secondaryLabelColor;
         [self addSubview:b];
     }
@@ -169,7 +185,7 @@ NSColor *TweakPillFill(CGFloat darkAlpha, CGFloat lightAlpha) {
 
 - (void)layout {
     [super layout];
-    CGFloat w = 26, x = 0;
+    CGFloat w = 28, x = 0;
     for (NSView *b in self.subviews) { b.frame = NSMakeRect(x, 0, w, NSHeight(self.bounds)); x += w; }
 }
 

@@ -36,6 +36,7 @@ extern NSString *const kDiaInteractiveIconControlName;   // back/forward/reload 
 #pragma mark - Tab sidebar
 
 extern NSString *const kDiaSidebarHeaderClass;
+extern NSString *const kDiaProfileIndicatorSuffix;        // the header's profile name ("Personal"), private class
 extern NSString *const kDiaSidebarFooterClass;
 extern NSString *const kDiaSidebarRootPrefix;            // + suffix: SidebarContainerRootView
 extern NSString *const kDiaSidebarRootSuffix;

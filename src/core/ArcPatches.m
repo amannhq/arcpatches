@@ -74,6 +74,7 @@ __attribute__((constructor)) static void init(void) {
         for (size_t i = 0; i < kFeatureCount; i++)
             if (kFeatures[i]->install && TweakFeatureActive(kFeatures[i])) kFeatures[i]->install();
         installKeyMonitor();
+        TweakDevDumpInstall();
         showPatchedName();
         if ([browser isEqualToString:kDiaBrowserID]) TweakHandoffInstall();   // the companion's handoff opens Dia only
         [NSNotificationCenter.defaultCenter addObserverForName:NSApplicationDidBecomeActiveNotification object:nil queue:nil

@@ -24,7 +24,7 @@
     b.accessibilityLabel = label;
     b.refusesFirstResponder = YES;   // never take focus from the page
     b.focusRingType = NSFocusRingTypeNone;
-    b.symbolConfiguration = [NSImageSymbolConfiguration configurationWithPointSize:12 weight:NSFontWeightMedium];
+    b.symbolConfiguration = [NSImageSymbolConfiguration configurationWithPointSize:13 weight:NSFontWeightRegular];
     b.contentTintColor = NSColor.secondaryLabelColor;
     b.wantsLayer = YES;
     b.layer.cornerRadius = 7;
@@ -41,7 +41,7 @@
     [super updateTrackingAreas];
     for (NSTrackingArea *t in self.trackingAreas) [self removeTrackingArea:t];
     [self addTrackingArea:[[NSTrackingArea alloc] initWithRect:NSZeroRect
-        options:NSTrackingMouseEnteredAndExited | NSTrackingActiveInKeyWindow | NSTrackingInVisibleRect owner:self userInfo:nil]];
+        options:NSTrackingMouseEnteredAndExited | NSTrackingActiveAlways | NSTrackingInVisibleRect owner:self userInfo:nil]];
 }
 
 - (void)mouseEntered:(NSEvent *)e { self.hovering = YES; [self updateFill]; }

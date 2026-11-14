@@ -41,6 +41,7 @@ extern NSString *const TweakKeyExtraShortcuts;
 extern NSString *const TweakKeyProfileNumberMods;
 extern NSString *const TweakKeyHideWindowButtonsInFullScreen;   // TopRow.m
 extern NSString *const TweakKeySidebarToggleButton;
+extern NSString *const TweakKeyTopRowProfileName;   // Dia's profile name in the top row (Arc shows none)
 
 typedef NS_ENUM(NSInteger, TweakCommandBarStyle) {
     TweakCommandBarStyleOff = 0,       // Dia's defaults
@@ -118,3 +119,5 @@ void TweakTabsInstall(void);   // call before main()
 BOOL TweakTabsAvailable(void);
 void TweakTabsSortByDomain(NSWindow *window);
 void TweakTabsGroupByDomain(NSWindow *window);
+
+void TweakDevDumpInstall(void);   // DevDump.m: view tree on request, for debugging

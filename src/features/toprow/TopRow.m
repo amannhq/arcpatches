@@ -9,18 +9,20 @@
 
 NSString *const TweakKeyHideWindowButtonsInFullScreen = @"arcpatches.hideWindowButtonsInFullScreen";
 NSString *const TweakKeySidebarToggleButton = @"arcpatches.sidebarToggleButton";
+NSString *const TweakKeyTopRowProfileName = @"arcpatches.topRowProfileName";
 
 static const CGFloat kButtonSize = 26;      // same as the back/forward/reload buttons
 static const CGFloat kGap = 4;              // between the window buttons and the toggle
 static const CGFloat kLeadingInset = 8;     // until the window buttons' inset is known
 static const CGFloat kWindowButtonsEnd = 76;  // x after the window buttons, if they can't be found
-static const CGFloat kRightReserve = 90;    // the nav buttons' area on the right
+static const CGFloat kRightReserve = 96;    // the nav buttons' area on the right
 static const void *kToggleKey = &kToggleKey;
 static const void *kInsetKey = &kInsetKey;
 static const void *kHidByUsKey = &kHidByUsKey;
 static const void *kExitingKey = &kExitingKey;
 static const void *kRehideKey = &kRehideKey;   // @[start, count] of recent re-hides
 static const void *kGaveUpKey = &kGaveUpKey;
+static const void *kProfileHiddenKey = &kProfileHiddenKey;
 
 static void (*origHeaderLayout)(id, SEL);
 static NSSize (*origButtonsSize)(id, SEL);
@@ -125,6 +127,42 @@ static void applyWindowButtons(NSView *buttons, BOOL hide) {
     }
 }
 
+#pragma mark - Profile name
+
+// Arc's top row has no space name, and Dia's would sit under the nav buttons. Hidden
+// with alpha, not `hidden`, so Dia's own layout of the row is unchanged; restored only
+// where we hid it.
+static void collectProfileViews(NSView *v, NSMutableArray *out, int depth) {
+    if (depth > 6) return;
+    for (NSView *s in v.subviews) {
+        if ([NSStringFromClass(s.class) hasSuffix:kDiaProfileIndicatorSuffix]) [out addObject:s];
+        else collectProfileViews(s, out, depth + 1);
+    }
+}
+
+static void applyProfileName(NSView *header) {
+    BOOL hide = ![TweakSettings boolForKey:TweakKeyTopRowProfileName];
+    NSMutableArray *views = [NSMutableArray array];
+    collectProfileViews(header, views, 0);
+    for (NSView *v in views) {
+        BOOL ours = [objc_getAssociatedObject(v, kProfileHiddenKey) boolValue];
+        if (hide && v.alphaValue > 0) {
+            v.alphaValue = 0;
+            objc_setAssociatedObject(v, kProfileHiddenKey, @YES, OBJC_ASSOCIATION_RETAIN);
+        } else if (!hide && ours) {
+            v.alphaValue = 1;
+            objc_setAssociatedObject(v, kProfileHiddenKey, nil, OBJC_ASSOCIATION_RETAIN);
+        }
+    }
+}
+
+// Hidden by alpha it would still take clicks meant for the nav buttons on top of it.
+static NSView *(*origProfileHitTest)(id, SEL, NSPoint);
+static NSView *hookedProfileHitTest(NSView *self, SEL _cmd, NSPoint p) {
+    if ([objc_getAssociatedObject(self, kProfileHiddenKey) boolValue]) return nil;
+    return origProfileHitTest(self, _cmd, p);
+}
+
 #pragma mark - Header layout
 
 static void setFrameIfChanged(NSView *v, NSRect f) { if (!NSEqualRects(v.frame, f)) v.frame = f; }
@@ -168,6 +206,7 @@ static void applyHeader(NSView *header) {
     if (buttons)
         applyWindowButtons(buttons, [TweakSettings boolForKey:TweakKeyHideWindowButtonsInFullScreen] && isFullScreen(header.window));
     placeToggle(header, buttons);
+    applyProfileName(header);
     gApplying = NO;
 }
 
@@ -197,6 +236,7 @@ static void installTopRow(void) {
     [NSUserDefaults.standardUserDefaults registerDefaults:@{
         TweakKeyHideWindowButtonsInFullScreen: @YES,
         TweakKeySidebarToggleButton: @YES,
+        TweakKeyTopRowProfileName: @NO,
     }];
     Class headerClass = NSClassFromString(kDiaSidebarHeaderClass);
     if (!headerClass) { NSLog(@"[arcpatches] %@ not found; sidebar top row inactive", kDiaSidebarHeaderClass); return; }
@@ -205,6 +245,9 @@ static void installTopRow(void) {
     if (buttonsClass) origButtonsSize = (void *)TweakHook(buttonsClass, @selector(intrinsicContentSize), (IMP)hookedButtonsSize);
     else NSLog(@"[arcpatches] %@ not found; window buttons stay in full screen", kDiaWindowStandardButtonsClass);
     origHeaderLayout = (void *)TweakHook(headerClass, @selector(layout), (IMP)hookedHeaderLayout);
+    Class profileClass = TweakFindClass(kDiaSidebarRootPrefix, kDiaProfileIndicatorSuffix);
+    if (profileClass) origProfileHitTest = (void *)TweakHook(profileClass, @selector(hitTest:), (IMP)hookedProfileHitTest);
+    else NSLog(@"[arcpatches] %@ not found; profile name stays in the top row", kDiaProfileIndicatorSuffix);
 
     NSNotificationCenter *nc = NSNotificationCenter.defaultCenter;
     for (NSNotificationName n in @[NSWindowWillEnterFullScreenNotification, NSWindowDidEnterFullScreenNotification,

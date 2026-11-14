@@ -41,6 +41,7 @@
     ]];
     NSView *topRowGroup = [self groupWithRows:@[
         [self rowWithTitle:@"Sidebar toggle button" detail:@"Shown after the window controls; hides and shows the sidebar with Dia's own command." control:[self switchForKey:TweakKeySidebarToggleButton] key:TweakKeySidebarToggleButton],
+        [self rowWithTitle:@"Profile name in top row" detail:@"Dia shows the profile name in the sidebar header. Arc doesn\u2019t, and it can sit under the back and forward buttons." control:[self switchForKey:TweakKeyTopRowProfileName] key:TweakKeyTopRowProfileName],
         [self rowWithTitle:@"Hide window buttons in full screen" detail:@"The sidebar's top row then starts with the toggle, as in Arc." control:[self switchForKey:TweakKeyHideWindowButtonsInFullScreen] key:TweakKeyHideWindowButtonsInFullScreen],
     ]];
     _recorders = [NSMutableArray array];

@@ -26,6 +26,7 @@ NSString *const kDiaAssistantBarClass = @"NavigationBar.AssistantBarView";
 NSString *const kDiaInteractiveIconControlName = @"InteractiveIconControl";
 
 NSString *const kDiaSidebarHeaderClass = @"TabSidebar.SidebarHeaderView";
+NSString *const kDiaProfileIndicatorSuffix = @"ProfileIndicatorWrapperView";
 NSString *const kDiaSidebarFooterClass = @"TabSidebar.SidebarContainerFooterView";
 NSString *const kDiaSidebarRootPrefix = @"_TtC10TabSidebar";
 NSString *const kDiaSidebarRootSuffix = @"SidebarContainerRootView";
