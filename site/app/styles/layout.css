@@ -96,6 +96,9 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
+  }
+
+  & canvas {
     image-rendering: pixelated;
   }
 
@@ -221,5 +224,20 @@
 
   & span:empty {
     display: none;
+  }
+}
+
+/* An optional second illustration between sections (site/art/hero-2.webp). */
+.art-band {
+  height: clamp(220px, 40vw, 520px);
+  margin-top: 64px;
+  overflow: hidden;
+  border-block: 1px solid var(--ink);
+
+  & img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
   }
 }

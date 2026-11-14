@@ -8,15 +8,23 @@ import { SiteNav } from "@/components/site/nav"
 import { Section } from "@/components/site/section"
 import { Support } from "@/components/site/support"
 import { GROUPS, SETTINGS } from "@/data/settings"
-import { BASE } from "@/lib/content"
+import { BASE, art } from "@/lib/content"
 
 export default function Home() {
+  // An optional second illustration (site/art/hero-2.webp); nothing is drawn without it.
+  const band = art("hero-2")
   return (
     <>
       <SiteNav current="home" />
       <main id="main">
         <Hero />
         <Features />
+        {band && (
+          <div className="art-band" aria-hidden>
+            {/* eslint-disable-next-line @next/next/no-img-element -- static export */}
+            <img src={band} alt="" loading="lazy" draggable={false} />
+          </div>
+        )}
         <How />
         <Section
           id="settings-teaser"

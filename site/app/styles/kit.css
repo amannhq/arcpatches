@@ -20,11 +20,12 @@
   flex-wrap: wrap;
   width: fit-content;
   max-width: 100%;
-  gap: 0;
+  /* Hairline gaps over an ink ground rule every cell, even when a row wraps. */
+  gap: 1px;
   padding: 0;
   border: 1px solid var(--ink);
   border-radius: 0;
-  background: var(--paper);
+  background: var(--ink);
   box-shadow: none;
 
   &::before,
@@ -39,11 +40,12 @@
 }
 
 [data-skin="hardware"] [data-kit="segment"]:not(#_):not(#_):not(#_):not(#_) {
+  flex: 1 1 auto;
   min-height: 36px;
   height: auto;
   padding: 6px 12px;
   border-radius: 0 !important;
-  background: transparent;
+  background: var(--paper);
   box-shadow: none;
   translate: none;
   color: var(--ink);
@@ -55,10 +57,6 @@
   &[data-checked] {
     color: #f4efe6;
     background: var(--ink);
-  }
-
-  & + [data-kit="segment"] {
-    border-left: 1px solid var(--ink);
   }
 
   &::before,
