@@ -7,7 +7,7 @@
 #import "Browser.h"
 #import <objc/runtime.h>
 
-static const CGFloat kRowHeight = 40;   // pill 30 + 2 top + 8 bottom
+static const CGFloat kRowHeight = TWEAK_PILL_HEIGHT + 10;   // pill + 2 top + 8 bottom
 static const void *kBarKey = &kBarKey;
 static const void *kNavKey = &kNavKey;
 static const void *kGapKey = &kGapKey;

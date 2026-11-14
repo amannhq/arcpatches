@@ -36,6 +36,7 @@
         [self rowWithTitle:@"⌘L opens the sidebar URL bar" detail:@"With Dia's editor as the command bar: open it at the sidebar instead of the top." control:[self switchForKey:TweakKeyCmdLFocusesSidebar] key:TweakKeyCmdLFocusesSidebar],
         [self rowWithTitle:@"Show full URL" detail:@"Otherwise only the site's domain is shown." control:[self switchForKey:TweakKeySidebarFullURL] key:TweakKeySidebarFullURL],
         [self rowWithTitle:@"Back, forward and reload buttons" detail:@"Shown next to the window controls." control:[self switchForKey:TweakKeySidebarNavButtons] key:TweakKeySidebarNavButtons],
+        [self rowWithTitle:@"Copy link and site controls" detail:@"Buttons that appear in the URL bar when the pointer is over it." control:[self switchForKey:TweakKeySidebarPillButtons] key:TweakKeySidebarPillButtons],
         [self rowWithTitle:@"Top bar while the sidebar is hidden" detail:@"Shows Dia's bar when the sidebar is collapsed, as in focus mode. Off, like Arc: no URL bar until the sidebar is back." control:[self switchForKey:TweakKeyTopBarWhenSidebarHidden] key:TweakKeyTopBarWhenSidebarHidden],
     ]];
     _recorders = [NSMutableArray array];
@@ -169,7 +170,7 @@
     [self setRow:TweakKeyDisableOnDeviceAI enabled:[TweakSettings boolForKey:TweakKeyHideAI]];
     for (NSString *key in self.switches) self.switches[key].state = [TweakSettings boolForKey:key] ? NSControlStateValueOn : NSControlStateValueOff;
     [self setRow:TweakKeyRevealOnHover enabled:mode != TweakURLBarModeTop];
-    for (NSString *k in @[TweakKeyCmdLFocusesSidebar, TweakKeySidebarFullURL, TweakKeySidebarNavButtons, TweakKeyTopBarWhenSidebarHidden])
+    for (NSString *k in @[TweakKeyCmdLFocusesSidebar, TweakKeySidebarFullURL, TweakKeySidebarNavButtons, TweakKeySidebarPillButtons, TweakKeyTopBarWhenSidebarHidden])
         [self setRow:k enabled:mode == TweakURLBarModeSidebar];
     BOOL shortcuts = [TweakSettings boolForKey:TweakKeyExtraShortcuts];
     for (TweakShortcutRecorder *r in self.recorders) {

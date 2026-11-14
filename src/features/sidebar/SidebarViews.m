@@ -1,13 +1,16 @@
 // The sidebar's URL pill and its back/forward/reload buttons.
 #import "SidebarViews.h"
 
-static const CGFloat kPillHeight = 30;
 static const CGFloat kSideInset = 6;    // same as the pinned tiles and tabs below it
+static const CGFloat kTextInset = 12;
+static const CGFloat kButtonSize = 28;
+static const CGFloat kButtonGap = 2;
+static const NSTimeInterval kCopiedFeedback = 1.2;
 
-static NSColor *dyn(CGFloat darkWhite, CGFloat darkAlpha, CGFloat lightWhite, CGFloat lightAlpha) {
+NSColor *TweakPillFill(CGFloat darkAlpha, CGFloat lightAlpha) {
     return [NSColor colorWithName:nil dynamicProvider:^NSColor *(NSAppearance *a) {
         BOOL dark = [[a bestMatchFromAppearancesWithNames:@[NSAppearanceNameAqua, NSAppearanceNameDarkAqua]] isEqualToString:NSAppearanceNameDarkAqua];
-        return dark ? [NSColor colorWithWhite:darkWhite alpha:darkAlpha] : [NSColor colorWithWhite:lightWhite alpha:lightAlpha];
+        return dark ? [NSColor colorWithWhite:1 alpha:darkAlpha] : [NSColor colorWithWhite:0 alpha:lightAlpha];
     }];
 }
 
@@ -19,21 +22,24 @@ static NSColor *dyn(CGFloat darkWhite, CGFloat darkAlpha, CGFloat lightWhite, CG
     if (!(self = [super initWithFrame:frame])) return nil;
     _pill = [[NSView alloc] initWithFrame:NSZeroRect];
     _pill.wantsLayer = YES;
-    _pill.layer.cornerRadius = 9;
+    _pill.layer.cornerRadius = 10;
     _pill.layer.cornerCurve = kCACornerCurveContinuous;
     [self addSubview:_pill];
 
-    _icon = [[NSImageView alloc] initWithFrame:NSZeroRect];
-    _icon.symbolConfiguration = [NSImageSymbolConfiguration configurationWithPointSize:10 weight:NSFontWeightMedium];
-    _icon.contentTintColor = NSColor.secondaryLabelColor;
-    [_pill addSubview:_icon];
-
+    // Arc shows the bare host: no lock or globe in front of it.
     _label = [NSTextField labelWithString:@""];
-    _label.font = [NSFont systemFontOfSize:12.5 weight:NSFontWeightMedium];
-    _label.textColor = NSColor.labelColor;
+    _label.font = [NSFont systemFontOfSize:13 weight:NSFontWeightRegular];
+    _label.textColor = NSColor.secondaryLabelColor;
     _label.lineBreakMode = NSLineBreakByTruncatingTail;
     _label.placeholderString = @"Search or enter URL";
     [_pill addSubview:_label];
+
+    _linkButton = [TweakPillIconButton buttonWithSymbol:@"link" label:@"Copy Link" target:self action:@selector(copyLink:)];
+    _siteButton = [TweakPillIconButton buttonWithSymbol:@"slider.horizontal.3" label:@"Site Controls" target:self action:@selector(siteControls:)];
+    for (NSButton *b in @[_linkButton, _siteButton]) {
+        b.hidden = YES;   // hidden, not transparent: an invisible button would still take the click
+        [_pill addSubview:b];
+    }
 
     [self updateAppearance];
     return self;
@@ -44,10 +50,20 @@ static NSColor *dyn(CGFloat darkWhite, CGFloat darkAlpha, CGFloat lightWhite, CG
 - (void)layout {
     [super layout];
     NSRect b = self.bounds;
-    self.pill.frame = NSMakeRect(kSideInset, 2, NSWidth(b) - kSideInset * 2, kPillHeight);
-    self.icon.frame = NSMakeRect(9, (kPillHeight - 14) / 2, 14, 14);
-    CGFloat fh = 17;
-    self.label.frame = NSMakeRect(27, (kPillHeight - fh) / 2, NSWidth(self.pill.frame) - 27 - 8, fh);
+    CGFloat h = TWEAK_PILL_HEIGHT;
+    self.pill.frame = NSMakeRect(kSideInset, 2, NSWidth(b) - kSideInset * 2, h);
+    CGFloat pad = (h - kButtonSize) / 2;
+    CGFloat right = NSWidth(self.pill.frame) - pad;
+    CGFloat textEnd = NSWidth(self.pill.frame) - kTextInset;
+    for (NSButton *btn in @[self.siteButton, self.linkButton]) {   // right to left
+        if (btn.hidden) continue;
+        right -= kButtonSize;
+        btn.frame = NSMakeRect(right, pad, kButtonSize, kButtonSize);
+        textEnd = right - 6;
+        right -= kButtonGap;
+    }
+    CGFloat fh = ceil(self.label.cell.cellSize.height) ?: 17;
+    self.label.frame = NSMakeRect(kTextInset, round((h - fh) / 2), MAX(0, textEnd - kTextInset), fh);
 }
 
 - (void)updateTrackingAreas {
@@ -59,17 +75,31 @@ static NSColor *dyn(CGFloat darkWhite, CGFloat darkAlpha, CGFloat lightWhite, CG
 
 - (void)mouseEntered:(NSEvent *)e { self.hovering = YES; [self updateAppearance]; }
 - (void)mouseExited:(NSEvent *)e { self.hovering = NO; [self updateAppearance]; }
-- (void)mouseDown:(NSEvent *)e { [self openEditor]; }
+- (void)mouseDown:(NSEvent *)e { [self openEditor]; }   // the buttons take their own clicks
 - (void)viewDidChangeEffectiveAppearance { [super viewDidChangeEffectiveAppearance]; [self updateAppearance]; }
 
 - (void)updateAppearance {
-    NSColor *bg = self.hovering ? dyn(1, 0.12, 0, 0.08) : dyn(1, 0.08, 0, 0.055);
+    NSColor *bg = self.hovering ? TweakPillFill(0.11, 0.07) : TweakPillFill(0.08, 0.05);
     [self.effectiveAppearance performAsCurrentDrawingAppearance:^{
         self.pill.layer.backgroundColor = bg.CGColor;
     }];
+    [self updateButtons];
+}
+
+- (void)updateButtons {
+    NSString *u = self.currentURL;
+    BOOL on = self.hovering && [TweakSettings boolForKey:TweakKeySidebarPillButtons];
+    BOOL hasURL = u.length && ![u isEqualToString:@"about:blank"];
+    BOOL copyShown = on && (hasURL || self.showingFeedback), siteShown = on && TweakSidebarURLIsSite(u);
+    if (self.linkButton.hidden == copyShown || self.siteButton.hidden == siteShown) {
+        self.linkButton.hidden = !copyShown;
+        self.siteButton.hidden = !siteShown;
+        self.needsLayout = YES;
+    }
 }
 
 - (void)refresh {
+    if (self.showingFeedback) return;   // "Copied" restores itself
     NSString *u = TweakURLForWindow(self.window);
     if ([u isEqualToString:self.currentURL] && self.label.stringValue.length) return;
     self.currentURL = u;
@@ -83,17 +113,36 @@ static NSColor *dyn(CGFloat darkWhite, CGFloat darkAlpha, CGFloat lightWhite, CG
         if (!TweakSettings.sidebarShowsFullURL && host.length && url.port) text = [text stringByAppendingFormat:@":%@", url.port];
     }
     self.label.stringValue = text;
-    NSString *symbol = !u.length ? @"magnifyingglass" : ([u hasPrefix:@"https://"] ? @"lock.fill" : @"globe");
-    self.icon.image = [NSImage imageWithSystemSymbolName:symbol accessibilityDescription:nil];
+    [self updateButtons];
 }
 
-- (void)forceRefresh { self.currentURL = nil; self.label.stringValue = @""; [self refresh]; }
+- (void)forceRefresh { if (self.showingFeedback) return; self.currentURL = nil; self.label.stringValue = @""; [self refresh]; }
 
 - (BOOL)openEditor {
     if (TweakCommandBarCurrentStyle() == TweakCommandBarStyleNative) return TweakCommandBarShow(self.window, NO);
     NSRect anchor = [self.pill convertRect:self.pill.bounds toView:nil];
     return TweakNavBarOpenEditor(self.window, anchor);
 }
+
+#pragma mark Hover buttons
+
+- (void)copyLink:(id)sender {
+    if (!TweakSidebarCopyURL(self.window)) { NSBeep(); return; }
+    NSUInteger generation = ++self.feedbackGeneration;
+    self.showingFeedback = YES;
+    self.label.stringValue = @"Copied";
+    [(TweakPillIconButton *)self.linkButton setSymbol:@"checkmark"];
+    __weak typeof(self) weakSelf = self;
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(kCopiedFeedback * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        TweakSidebarURLBar *bar = weakSelf;
+        if (!bar || bar.feedbackGeneration != generation) return;   // a later copy owns the label now
+        bar.showingFeedback = NO;
+        [(TweakPillIconButton *)bar.linkButton setSymbol:@"link"];
+        [bar forceRefresh];
+    });
+}
+
+- (void)siteControls:(id)sender { TweakSidebarOpenSiteControls(self.window); }
 
 @end
 
