@@ -1,5 +1,3 @@
-import { ArrowRight } from "lucide-react"
-import { Backdrop } from "@/components/site/backdrop"
 import { Cli } from "@/components/site/cli"
 import { Faq } from "@/components/site/faq"
 import { Features } from "@/components/site/features"
@@ -15,7 +13,6 @@ import { BASE } from "@/lib/content"
 export default function Home() {
   return (
     <>
-      <Backdrop />
       <SiteNav current="home" />
       <main id="main">
         <Hero />
@@ -23,22 +20,21 @@ export default function Home() {
         <How />
         <Section
           id="settings-teaser"
-          eyebrow="Settings"
-          title="Make it yours."
-          intro={`${SETTINGS.length} settings in ${GROUPS.length} groups, each shown on and off with the command that sets it.`}
+          label="Settings"
+          title="Set it up your way."
+          intro={`${SETTINGS.length} settings in ${GROUPS.length} groups. Each one is shown on and off, with the command that sets it.`}
         >
-          <div className="glass teaser">
-            <ul>
-              {GROUPS.map((g) => (
-                <li key={g.name}>
-                  <strong>{g.name}</strong> <span>{g.blurb}</span>
-                </li>
-              ))}
-            </ul>
-            <a className="pill-link strong" href={`${BASE}/settings/`}>
-              See every setting <ArrowRight aria-hidden size={16} />
-            </a>
-          </div>
+          <dl className="ruled-grid">
+            {GROUPS.map((g) => (
+              <div key={g.name}>
+                <dt>{g.name}</dt>
+                <dd>{g.blurb}</dd>
+              </div>
+            ))}
+          </dl>
+          <p className="more">
+            <a href={`${BASE}/settings/`}>See every setting →</a>
+          </p>
         </Section>
         <Cli />
         <Support />

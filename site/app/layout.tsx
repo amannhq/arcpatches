@@ -7,27 +7,28 @@ import "./globals.css"
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://amannhq.github.io/arcpatches/"),
-  title: "ArcPatches: Arc's sidebar, back in your browser",
+  title: "ArcPatches: Arc's sidebar, in Dia",
   description:
-    "ArcPatches patches your own copy of Dia with Arc's sidebar URL bar, ⌘T command bar and shortcuts. Open source, restorable in one click.",
+    "ArcPatches adds Arc's sidebar URL bar, ⌘T command bar and shortcuts to your copy of Dia. Open source, and one click restores the original.",
   openGraph: {
     title: "ArcPatches",
-    description: "Arc's sidebar, back in your browser.",
+    description: "Arc's sidebar, in Dia.",
     url: "https://amannhq.github.io/arcpatches/",
     type: "website",
   },
 }
 
 export const viewport: Viewport = {
-  themeColor: "#0E3A48",
-  colorScheme: "dark",
+  themeColor: "#F4EFE6",
+  colorScheme: "light",
 }
 
+// The kit's key colour is the print's teal-blue (#1F5F86), as OKLCH.
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${GeistSans.variable} ${GeistMono.variable}`}>
       <body>
-        <Hardware className="ap" keyColor={{ l: 0.82, c: 0.16, h: 78 }}>
+        <Hardware className="ap" keyColor={{ l: 0.46, c: 0.09, h: 240 }}>
           {children}
           <Toasts />
         </Hardware>

@@ -8,7 +8,17 @@ const read = (file: string) => fs.readFileSync(path.join(repo, file), "utf8")
 
 export const BASE = "/arcpatches"
 export const REPO_URL = "https://github.com/amannhq/arcpatches"
-export const INSTALL_CMD = "curl -fsSL https://raw.githubusercontent.com/amannhq/arcpatches/main/install.sh | bash"
+export const SITE_URL = "https://amannhq.github.io/arcpatches"
+export const INSTALL_CMD = `curl -fsSL ${SITE_URL}/install.sh | bash`
+export const AGENT_DOC_URL = `${REPO_URL}/blob/main/docs/agent-install.md`
+
+/** An illustration copied from site/art/ by scripts/copy-shots.mjs, or null when it isn't there. */
+export function art(name: string): string | null {
+  for (const ext of ["webp", "avif", "png", "jpg"]) {
+    if (fs.existsSync(path.join(process.cwd(), "public", "art", `${name}.${ext}`))) return `${BASE}/art/${name}.${ext}`
+  }
+  return null
+}
 
 export function version(): string {
   return read("VERSION").trim()

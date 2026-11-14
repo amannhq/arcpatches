@@ -1,39 +1,29 @@
-/* ── Tables ──────────────────────────────────────────────────────────── */
+/* ── Tables: ink rules, no boxes ─────────────────────────────────────── */
 
 .table-scroll {
+  max-width: 100%;
   overflow-x: auto;
-  border-radius: 14px;
 
   & table {
     width: 100%;
     min-width: 560px;
     border-collapse: collapse;
-    font-size: 14px;
+    font-size: 15px;
     text-align: left;
-  }
-
-  & caption {
-    caption-side: top;
-    padding: 0 0 8px;
-    text-align: left;
-    font: 600 12px/1 var(--font-geist-mono), monospace;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--amber);
   }
 
   & :is(th, td) {
-    padding: 11px 14px;
+    padding: 12px 16px 12px 0;
     vertical-align: top;
-    border-bottom: 1px solid var(--hair);
+    border-bottom: 1px solid var(--rule-soft);
   }
 
   & thead th {
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--bone-3);
-    text-transform: uppercase;
+    border-bottom: 1px solid var(--ink);
+    font: 500 12px/1.3 var(--font-geist-mono), ui-monospace, monospace;
     letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-3);
   }
 
   & tbody th {
@@ -42,14 +32,36 @@
   }
 
   & td {
-    color: var(--bone-2);
-  }
-
-  & tr:last-child :is(th, td) {
-    border-bottom: 0;
+    color: var(--ink-2);
   }
 }
 
-.glass.table-scroll {
-  padding: 8px 6px;
+/* A flat square of ink before each status. */
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  color: var(--ink);
+
+  &::before {
+    content: "";
+    width: 10px;
+    height: 10px;
+    border: 1px solid var(--ink);
+    background: var(--slate);
+  }
+
+  &[data-status="yes"]::before {
+    background: var(--teal);
+  }
+  &[data-status="partial"]::before {
+    background: var(--gold);
+  }
+  &[data-status="no"]::before {
+    background: var(--coral);
+  }
+  &[data-status="na"]::before {
+    background: transparent;
+  }
 }

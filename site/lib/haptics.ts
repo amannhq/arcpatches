@@ -1,5 +1,3 @@
-import { soundFor } from "@/lib/sound"
-
 type Haptic = "selection" | "light" | "medium" | "heavy" | "soft" | "rigid" | "success" | "warning" | "error"
 
 const patterns: Record<Haptic, number | number[]> = {
@@ -53,8 +51,6 @@ function haptic(kind: Haptic) {
   const now = performance.now()
   if (now - last < 30) return
   last = now
-  // Every haptic also sounds (unless muted): see sound.ts.
-  soundFor(kind)
   if (canVibrate()) {
     navigator.vibrate(patterns[kind])
   } else if (hasSwitch()) {

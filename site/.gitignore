@@ -42,3 +42,6 @@ next-env.d.ts
 
 # screenshots copied from ../docs/screenshots by scripts/copy-shots.mjs
 /public/shots/
+# copied by scripts/copy-shots.mjs: ../install.sh and art/*.webp
+/public/install.sh
+/public/art/

@@ -1,4 +1,4 @@
-/* ── Nav ─────────────────────────────────────────────────────────────── */
+/* ── Masthead ────────────────────────────────────────────────────────── */
 
 .skip {
   position: fixed;
@@ -6,9 +6,8 @@
   top: 8px;
   left: 8px;
   padding: 8px 14px;
-  border-radius: 10px;
-  background: var(--amber);
-  color: var(--ink-black);
+  background: var(--ink);
+  color: var(--paper);
   font-weight: 600;
   translate: 0 -200%;
 
@@ -17,179 +16,210 @@
   }
 }
 
-[data-skin="hardware"] .site-nav [data-kit="navbar"]:not(#_):not(#_) {
-  position: fixed;
-  z-index: 60;
-  top: 12px;
-  left: 0;
-  right: 0;
-  width: min(1148px, calc(100% - 24px));
-  margin-inline: auto;
-  gap: 18px;
-  padding: 0 10px 0 18px;
-  background: rgb(9 24 30 / 0.62);
-  -webkit-backdrop-filter: blur(28px) saturate(1.2);
-  backdrop-filter: blur(28px) saturate(1.2);
-  box-shadow:
-    inset 0 0 0 1px var(--hair),
-    0 18px 40px -20px rgb(0 0 0 / 0.7);
-
-  &::before,
-  &::after {
-    display: none;
-  }
+.masthead {
+  border-bottom: 1px solid var(--ink);
+  background: var(--paper);
 }
 
-[data-skin="hardware"] .site-nav [data-kit="navbar-brand"]:not(#_) strong {
-  font: 700 17px/1 var(--sans);
-  letter-spacing: -0.01em;
-  text-transform: none;
-  color: var(--bone);
-}
-
-[data-skin="hardware"] .site-nav [data-kit="navbar-link"]:not(#_):not(#_) {
-  font: 500 13px/1 var(--sans);
-  letter-spacing: 0.01em;
-  text-transform: none;
-  color: var(--bone-2);
-  --led-off: rgb(255 255 255 / 0.22);
-
-  &:hover,
-  &[aria-current] {
-    color: var(--bone);
-  }
-
-  &[aria-current]::before {
-    background: var(--amber);
-    box-shadow: 0 0 8px var(--amber);
-  }
-}
-
-.nav-tools {
+.masthead-inner {
   display: flex;
-  flex-shrink: 0;
-  gap: 2px;
-}
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 24px;
+  min-height: 56px;
+  padding-block: 8px;
 
-[data-icon-button] {
-  display: inline-grid;
-  place-items: center;
-  width: 40px;
-  height: 40px;
-  border: 0;
-  border-radius: 10px;
-  background: none;
-  color: var(--bone-2);
-  cursor: pointer;
+  & nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px 20px;
+  }
 
-  &:hover {
-    color: var(--bone);
-    background: rgb(255 255 255 / 0.1);
+  & nav a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 32px;
+    font-size: 14px;
+    color: var(--ink);
+    text-decoration: none;
+
+    &:hover,
+    &[aria-current] {
+      text-decoration: underline;
+      text-decoration-thickness: 1px;
+      text-underline-offset: 4px;
+      color: var(--ink);
+    }
   }
 }
 
-@media (max-width: 520px) {
-  [data-skin="hardware"] .site-nav [data-kit="navbar-brand"]:not(#_) {
-    display: none;
+.brand {
+  font-weight: 700;
+  font-size: 17px;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+@media (max-width: 640px) {
+  /* One line of links that scrolls sideways, rather than a ragged second row. */
+  .masthead-inner nav {
+    flex-wrap: nowrap;
+    gap: 0 16px;
+    max-width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .masthead-inner nav a {
+    font-size: 13px;
   }
 }
 
-/* ── Hero ────────────────────────────────────────────────────────────── */
+/* ── Hero: a full-bleed print with a paper panel over its lower edge ── */
 
 .hero {
   position: relative;
-  isolation: isolate;
-  min-height: min(100svh, 980px);
-  padding: 104px 0 72px;
-  display: flex;
-  align-items: center;
+  padding-bottom: 24px;
 }
 
 .hero-art {
-  z-index: 0;
-}
+  position: relative;
+  height: clamp(300px, 62vw, 680px);
+  overflow: hidden;
+  background: var(--sky);
+  border-bottom: 1px solid var(--ink);
 
-.hero-grid {
-  display: grid;
-  gap: 28px;
-  align-items: center;
-}
+  & img,
+  & canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    image-rendering: pixelated;
+  }
 
-@media (min-width: 1000px) {
-  .hero-grid {
-    grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
-    gap: 40px;
+  /* A fine halftone screen over the print, like ink on uncoated stock. */
+  &:has(canvas)::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle, rgb(20 20 20 / 0.14) 0 0.8px, transparent 1.2px) 0 0 / 4px 4px;
+    mix-blend-mode: multiply;
+    pointer-events: none;
   }
 }
 
-.hero-copy {
+.hero-wrap {
+  margin-top: -64px;
+}
+
+.hero-panel {
+  position: relative;
   display: grid;
-  gap: 20px;
-  padding: 28px 22px;
-  justify-items: start;
+  gap: 18px;
+  max-width: 720px;
+  padding: 24px 20px 26px;
+  background: var(--paper);
+  border: 1px solid var(--ink);
+  /* A second, flat colour printed slightly out of register. */
+  box-shadow: 8px 8px 0 var(--coral);
 
   & h1 {
-    font-size: clamp(2.35rem, 5.4vw, 4.1rem);
-    line-height: 1.02;
-    font-weight: 700;
-    letter-spacing: -0.035em;
+    font-size: clamp(2.5rem, 6.4vw, 4.4rem);
+    line-height: 0.98;
+    font-weight: 650;
+    letter-spacing: -0.04em;
   }
 
-  & > [data-kit="code-block"] {
-    width: 100%;
+  & .lede {
+    max-width: 46ch;
   }
 }
 
 @media (min-width: 640px) {
-  .hero-copy {
-    padding: 36px 34px;
+  .hero-panel {
+    padding: 36px 40px 38px;
+    box-shadow: 12px 12px 0 var(--coral);
+  }
+  .hero-wrap {
+    margin-top: -220px;
   }
 }
 
-.lede {
-  font-size: clamp(1.02rem, 1.4vw, 1.14rem);
-  color: var(--bone-2);
-  max-width: 62ch;
+@media (min-width: 1100px) {
+  .hero-wrap {
+    margin-top: -300px;
+  }
 }
 
-.fine {
-  font-size: 13px;
-  color: var(--bone-3);
-}
-
-.cta-row,
-.hero-meta {
+.hero-links {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
-  align-items: center;
+  gap: 6px 22px;
+  font-size: 15px;
 }
 
-.pill-link {
+/* ── Command block ───────────────────────────────────────────────────── */
+
+.command {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.command-label {
+  font: 500 12px/1.3 var(--font-geist-mono), ui-monospace, monospace;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.command-body {
+  display: flex;
+  min-width: 0;
+  border: 1px solid var(--ink);
+  background: var(--sheet);
+
+  & pre {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+    padding: 11px 14px;
+    overflow-x: auto;
+    white-space: pre;
+    font: 400 13px/1.6 var(--font-geist-mono), ui-monospace, monospace;
+    color: var(--ink);
+    scrollbar-width: thin;
+  }
+}
+
+.command[data-wrap] pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.command-copy {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  min-height: 40px;
-  padding: 4px 12px;
-  border-radius: 12px;
-  color: var(--bone);
-  text-decoration: none;
-  font-size: 14px;
-  box-shadow: inset 0 0 0 1px var(--hair);
+  justify-content: center;
+  gap: 6px;
+  flex-shrink: 0;
+  min-width: 44px;
+  padding: 0 12px;
+  border: 0;
+  border-left: 1px solid var(--ink);
+  background: transparent;
+  color: var(--ink);
+  font: 500 12px/1 var(--font-geist-mono), ui-monospace, monospace;
+  cursor: pointer;
 
   &:hover {
-    background: rgb(255 255 255 / 0.08);
+    background: var(--ink);
+    color: var(--paper);
   }
 
-  &.strong {
-    font-weight: 600;
-    background: var(--amber);
-    color: var(--ink-black);
-    box-shadow: none;
+  & span:empty {
+    display: none;
   }
-}
-
-.hero-shot .shot,
-.showcase-item .shot {
-  margin-inline: auto;
 }

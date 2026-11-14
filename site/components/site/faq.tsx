@@ -18,8 +18,8 @@ const FAQ: { q: string; a: React.ReactNode }[] = [
     a: (
       <>
         That happens when the app was downloaded in a browser. Open System Settings → Privacy &amp; Security, scroll down,
-        and click <strong>Open Anyway</strong> next to ArcPatches. Or install with the curl command instead: files fetched
-        with curl aren&rsquo;t quarantined, so macOS doesn&rsquo;t ask.
+        and click <strong>Open Anyway</strong> next to ArcPatches. Or install with the curl command: files fetched with curl
+        aren&rsquo;t quarantined, so macOS doesn&rsquo;t ask.
       </>
     ),
   },
@@ -37,7 +37,7 @@ const FAQ: { q: string; a: React.ReactNode }[] = [
   },
   {
     q: "What happens when Dia updates?",
-    a: "Dia's own updater keeps working. After it installs a new version, ArcPatches patches it again, from its menu bar app or a background job. If an update changes something a feature depends on, that feature switches itself off rather than crashing, and the app lists which one.",
+    a: "Dia's own updater keeps working. After it installs a new version, ArcPatches patches it again, from its menu bar app or a background job. If an update changes something a feature depends on, that feature turns itself off rather than crashing, and the app lists which one.",
   },
   {
     q: "How do I undo it?",
@@ -49,20 +49,18 @@ const FAQ: { q: string; a: React.ReactNode }[] = [
       </>
     ),
   },
-  {
-    q: "Is this affiliated with The Browser Company?",
-    a: "No. ArcPatches is an unofficial, independent project. Patching an app may go against its terms of use, so decide for yourself before installing.",
-  },
 ]
 
 export function Faq() {
   return (
-    <Section id="faq" eyebrow="FAQ" title="Questions, answered.">
+    <Section id="faq" label="FAQ" title="Questions">
       <div className="faq">
         {FAQ.map(({ q, a }) => (
-          <details key={q} className="glass">
+          <details key={q}>
             <summary>{q}</summary>
-            <div className="answer">{typeof a === "string" ? <p>{a}</p> : <p>{a}</p>}</div>
+            <div className="answer">
+              <p>{a}</p>
+            </div>
           </details>
         ))}
       </div>
