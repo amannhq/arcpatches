@@ -63,8 +63,20 @@ private func writeManifest() {
           note: "off: Dia's editor at the top, not rendered."),
         s("emptyState", "No page open", on: "empty-state.png", off: nil, note: "Not a setting: the pill with no page."),
         s("copyLink", "Copy link feedback", on: nil, off: nil, demo: "demo-copy-link.png", note: "Not a setting: clicking copy link."),
-    ]
-    let json = try! JSONSerialization.data(withJSONObject: ["fps": 30, "loop": true, "items": items] as [String: Any],
+    ] + [("revealOnHover", "Reveal top bar on hover"), ("topBarWhenSidebarHidden", "Top bar while the sidebar is hidden"),
+         ("newTabPalette", "New tab opens the palette")].map {
+        s($0.0, $0.1, on: nil, off: nil, note: "Changes when Dia's own UI shows: no ArcPatches view to render.")
+    } + [("hideAI", "Hide AI features"), ("blockAI", "Block AI services"), ("blockTelemetry", "Block telemetry"),
+         ("disableOnDeviceAI", "Turn off on-device AI"), ("noBackgroundNetworking", "Disable background networking"),
+         ("rendererProcessLimit", "Renderer process limit"), ("extraShortcuts", "Extra shortcuts"),
+         ("profileNumberMods", "Switch to profile 1–9"), ("arcShortcut.copyURL", "Arc shortcut: Copy URL"),
+         ("arcShortcut.copyMarkdown", "Arc shortcut: Copy URL as Markdown")].map {
+        s($0.0, $0.1, on: nil, off: nil, note: "Nothing to show: privacy, performance or keyboard.")
+    }
+    // Images are 2x (show at half their pixel size), except the wide palette demo, rendered at 1x.
+    let scales = ["demo-palette.png": 1]
+    let json = try! JSONSerialization.data(withJSONObject: ["fps": 30, "loop": true, "defaultScale": 2, "scales": scales,
+                                                           "items": items] as [String: Any],
                                            options: [.prettyPrinted, .sortedKeys])
     try! json.write(to: out.appendingPathComponent("settings/manifest.json"))
 }
@@ -157,9 +169,11 @@ func writeAPNG(_ frames: [CGImage], fps: Int, to url: URL) throws {
         parts.append((f, CGRect(x: x0, y: y0, width: x1 - x0 + 1, height: y1 - y0 + 1), 1))
         prev = px
     }
-    var png = Data([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]), seq: UInt32 = 0
+    var png = Data([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]), seq: UInt32 = 0, format = Data()
     for (n, p) in parts.enumerated() {
         let (ihdr, idat) = encode(n == 0 ? p.img : p.img.cropping(to: p.rect)!)
+        if n == 0 { format = ihdr[ihdr.startIndex + 8...ihdr.startIndex + 9] }
+        precondition(ihdr[ihdr.startIndex + 8...ihdr.startIndex + 9] == format, "APNG frames need one bit depth and colour type")
         if n == 0 {
             png.append(chunk("IHDR", ihdr))
             png.append(chunk("acTL", be32(UInt32(parts.count)) + be32(0)))   // 0: loop forever
