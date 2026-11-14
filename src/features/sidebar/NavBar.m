@@ -11,6 +11,9 @@ static CGFloat gBarHeight = 42;
 static NSHashTable<NSView *> *gPanes;
 static NSMapTable<NSView *, NSNumber *> *gRevealed;
 static void (*origLayout)(id, SEL);
+static NSTimer *gTimer;
+
+NSNotificationName const TweakSidebarTopBarNeedsUpdateNotification = @"dev.amannhq.arcpatches.sidebarTopBarNeedsUpdate";
 
 BOOL TweakNavBarShouldHideInWindow(NSWindow *window) {
     switch (TweakSettings.urlBarMode) {
@@ -107,6 +110,35 @@ static void updateReveal(void) {
             [gRevealed setObject:@(want) forKey:pane];
             applyPane(pane);
         }
+    }
+    TweakNavBarUpdateTimer();
+}
+
+static BOOL anyRevealed(void) {
+    for (NSView *pane in gPanes.allObjects)
+        if (isRevealed(pane)) return YES;
+    return NO;
+}
+
+// The timer only catches what no event reports: the pointer leaving the window while
+// hover reveal is on or a bar is out, and the end of an anchored editor session. Off
+// while another app is active (re-checked on activation).
+static void tick(void) {
+    if (TweakSettings.urlBarMode != TweakURLBarModeTop) updateReveal();
+    TweakNavBarEditorTick();
+    TweakNavBarUpdateTimer();
+}
+
+void TweakNavBarUpdateTimer(void) {
+    if (!gPanes) return;
+    BOOL hiding = TweakSettings.urlBarMode != TweakURLBarModeTop;
+    BOOL need = NSApp.isActive && (TweakNavBarEditorAnchored() || (hiding && (TweakSettings.revealOnHover || anyRevealed())));
+    if (need && !gTimer) {
+        gTimer = [NSTimer scheduledTimerWithTimeInterval:0.5 repeats:YES block:^(__unused NSTimer *t) { tick(); }];
+        gTimer.tolerance = 0.25;
+    } else if (!need && gTimer) {
+        [gTimer invalidate];
+        gTimer = nil;
     }
 }
 
@@ -206,17 +238,24 @@ void TweakNavBarInstall(void) {
     Class barCls = NSClassFromString(kDiaNavigationBarClass);
     if (barCls) origBarSetHidden = (void *)TweakHook(barCls, @selector(setHidden:), (IMP)hookedBarSetHidden);
 
-    // Hover reveal follows the mouse; a slow timer catches the pointer leaving the
-    // window and focus changes.
-    [NSEvent addLocalMonitorForEventsMatchingMask:NSEventMaskMouseMoved | NSEventMaskMouseExited handler:^NSEvent *(NSEvent *e) {
+    // Hover reveal follows the mouse; focus moves into or out of the bar on a click or
+    // a key; a slow timer (above) catches the rest.
+    NSEventMask mask = NSEventMaskMouseMoved | NSEventMaskMouseExited | NSEventMaskLeftMouseUp | NSEventMaskKeyUp;
+    [NSEvent addLocalMonitorForEventsMatchingMask:mask handler:^NSEvent *(NSEvent *e) {
         if (TweakSettings.urlBarMode != TweakURLBarModeTop) updateReveal();
         return e;
     }];
-    NSTimer *timer = [NSTimer scheduledTimerWithTimeInterval:0.5 repeats:YES block:^(__unused NSTimer *t) {
-        if (TweakSettings.urlBarMode != TweakURLBarModeTop) updateReveal();
-        TweakNavBarEditorTick();
+    NSNotificationCenter *nc = NSNotificationCenter.defaultCenter;
+    [nc addObserverForName:NSApplicationDidResignActiveNotification object:nil queue:nil usingBlock:^(__unused NSNotification *n) {
+        TweakNavBarUpdateTimer();
     }];
-    timer.tolerance = 0.25;
-    [NSNotificationCenter.defaultCenter addObserverForName:TweakSettingsDidChangeNotification object:nil queue:nil
-                                                usingBlock:^(__unused NSNotification *n) { relayoutAll(); }];
+    [nc addObserverForName:NSApplicationDidBecomeActiveNotification object:nil queue:nil usingBlock:^(__unused NSNotification *n) {
+        tick();
+    }];
+    for (NSNotificationName name in @[TweakSettingsDidChangeNotification, TweakSidebarTopBarNeedsUpdateNotification])
+        [nc addObserverForName:name object:nil queue:nil usingBlock:^(__unused NSNotification *n) {
+            relayoutAll();
+            TweakNavBarUpdateTimer();
+        }];
+    TweakNavBarUpdateTimer();
 }

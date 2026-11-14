@@ -20,9 +20,41 @@ static BOOL onDeviceAIOff(void) {
     return [TweakSettings boolForKey:TweakKeyHideAI] && [TweakSettings boolForKey:TweakKeyDisableOnDeviceAI];
 }
 
+// clang's block ABI (Block_layout / Block_descriptor).
+struct TweakBlockLayout { void *isa; int flags, reserved; void *invoke; struct { unsigned long reserved, size; void *rest[]; } *desc; };
+
+// A block's own type signature, or NULL.
+static const char *blockSignature(id block) {
+    struct TweakBlockLayout *b = (__bridge void *)block;
+    enum { HasCopyDispose = 1 << 25, HasSignature = 1 << 30 };
+    if (!b || !b->desc || !(b->flags & HasSignature)) return NULL;
+    return b->desc->rest[(b->flags & HasCopyDispose) ? 2 : 0];
+}
+
+// Answers a skipped initialize:callback: with "nothing"/failure (nil, NO, 0) so whoever
+// awaits it moves on. Only for void blocks whose arguments are all objects, blocks, BOOLs
+// or integers (all passed as one zeroed register); otherwise NO and the caller lets Dia start
+// the service.
+static BOOL answerWithFailure(id callback) {
+    const char *sig = blockSignature(callback);
+    NSMethodSignature *ms = nil;
+    @try { ms = sig ? [NSMethodSignature signatureWithObjCTypes:sig] : nil; } @catch (__unused NSException *e) {}
+    if (!ms || ms.methodReturnType[0] != 'v' || ms.numberOfArguments > 5) return NO;
+    for (NSUInteger i = 1; i < ms.numberOfArguments; i++)   // 0 is the block itself
+        if (!strchr("@#BcCsSiIlLqQ", [ms getArgumentTypeAtIndex:i][0])) return NO;
+    void (*invoke)(id, long, long, long, long) = ((struct TweakBlockLayout *)(__bridge void *)callback)->invoke;
+    dispatch_async(dispatch_get_main_queue(), ^{ invoke(callback, 0, 0, 0, 0); });   // extra zeroed registers are ignored
+    return YES;
+}
+
 static void (*origAIInitialize)(id, SEL, id, id);
 static void hookedAIInitialize(id self, SEL _cmd, id config, id callback) {
-    if (onDeviceAIOff()) { NSLog(@"[arcpatches] on-device AI service not started"); return; }
+    if (onDeviceAIOff()) {
+        if (!callback) { NSLog(@"[arcpatches] on-device AI service not started"); return; }
+        if (answerWithFailure(callback)) { NSLog(@"[arcpatches] on-device AI service not started (callback answered)"); return; }
+        static BOOL logged;
+        if (!logged) { logged = YES; NSLog(@"[arcpatches] AI initialize callback has an unknown shape; service starts anyway"); }
+    }
     origAIInitialize(self, _cmd, config, callback);
 }
 
@@ -44,7 +76,16 @@ NSArray<NSString *> *TweakPerformanceSwitches(void) {
 void TweakPerformanceInstall(void) {
     Class ai = NSClassFromString(kDiaAIServiceClass);
     if (ai) {
-        origAIInitialize = (void *)TweakHook(ai, @selector(initialize:callback:), (IMP)hookedAIInitialize);
+        // Only hook initialize:callback: while it still is -(void)x:(id)config callback:(block).
+        Method m = class_getInstanceMethod(ai, @selector(initialize:callback:));
+        const char *types = m ? method_getTypeEncoding(m) : NULL;
+        NSMethodSignature *ms = nil;
+        @try { ms = types ? [NSMethodSignature signatureWithObjCTypes:types] : nil; } @catch (__unused NSException *e) {}
+        if (ms && ms.numberOfArguments == 4 && ms.methodReturnType[0] == 'v' && [ms getArgumentTypeAtIndex:2][0] == '@' &&
+            !strcmp([ms getArgumentTypeAtIndex:3], "@?"))
+            origAIInitialize = (void *)TweakHook(ai, @selector(initialize:callback:), (IMP)hookedAIInitialize);
+        else
+            NSLog(@"[arcpatches] ArcAIService initialize:callback: is %s; on-device AI not stopped at start", types ?: "missing");
         origAIIsAvailable = (void *)TweakHook(ai, @selector(isAvailable), (IMP)hookedAIIsAvailable);
     } else {
         NSLog(@"[arcpatches] ArcAIService not found; on-device AI switch inactive");

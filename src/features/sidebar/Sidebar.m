@@ -3,6 +3,7 @@
 // (or ⌘L) opens Dia's own URL editor (autocomplete, history, tabs, search)
 // anchored over the pill instead of the top bar.
 #import "SidebarViews.h"
+#import "NavBarInternal.h"
 #import "Features.h"
 #import "Browser.h"
 #import <objc/runtime.h>
@@ -117,7 +118,7 @@ static void reapplyContainer(NSView *c) {
     applyContainer(c);
     if (had != (barFor(c).superview != nil))
         dispatch_async(dispatch_get_main_queue(), ^{
-            [NSNotificationCenter.defaultCenter postNotificationName:TweakSettingsDidChangeNotification object:nil];
+            [NSNotificationCenter.defaultCenter postNotificationName:TweakSidebarTopBarNeedsUpdateNotification object:nil];
         });
 }
 
@@ -156,7 +157,7 @@ static void noteVisibility(NSView *c) {
     objc_setAssociatedObject(c, kShownKey, @(shown), OBJC_ASSOCIATION_RETAIN);
     if (was && was.boolValue != shown)
         dispatch_async(dispatch_get_main_queue(), ^{
-            [NSNotificationCenter.defaultCenter postNotificationName:TweakSettingsDidChangeNotification object:nil];
+            [NSNotificationCenter.defaultCenter postNotificationName:TweakSidebarTopBarNeedsUpdateNotification object:nil];
         });
 }
 
@@ -172,8 +173,10 @@ void TweakSidebarInstall(void) {
     // pages that change URL without changing title. Also attaches a bar the container's
     // layout couldn't (its header or body not there yet): nothing may lay it out again.
     // Add-only, so a transient hide never flips back to the top bar.
+    // Windows nobody can see (occluded, other Space, minimised) wait until they're shown.
     void (^refreshAll)(void) = ^{
         for (NSView *c in gContainers.allObjects) {
+            if (!(c.window.occlusionState & NSWindowOcclusionStateVisible)) continue;
             if (!barFor(c).superview) reapplyContainer(c);
             noteVisibility(c);
             [barFor(c) refresh];
@@ -181,14 +184,32 @@ void TweakSidebarInstall(void) {
     };
     gTitleObserver = [TweakTitleObserver new];
     gTitleObserver.onChange = refreshAll;
-    for (NSNotificationName n in @[NSWindowDidBecomeKeyNotification, NSWindowDidBecomeMainNotification, NSWindowDidUpdateNotification])
-        [NSNotificationCenter.defaultCenter addObserverForName:n object:nil queue:nil usingBlock:^(NSNotification *note) {
-            NSWindow *w = note.object;
-            if (n == NSWindowDidUpdateNotification) { [gTitleObserver watch:w]; return; }
+    for (NSWindow *w in NSApp.windows) [gTitleObserver watch:w];
+    NSNotificationCenter *nc = NSNotificationCenter.defaultCenter;
+    for (NSNotificationName n in @[NSWindowDidBecomeKeyNotification, NSWindowDidBecomeMainNotification, NSWindowDidChangeOcclusionStateNotification])
+        [nc addObserverForName:n object:nil queue:nil usingBlock:^(NSNotification *note) {
+            [gTitleObserver watch:note.object];   // a browser window is main or key before its title matters
             refreshAll();
         }];
-    NSTimer *timer = [NSTimer scheduledTimerWithTimeInterval:3 repeats:YES block:^(__unused NSTimer *t) { refreshAll(); }];
-    timer.tolerance = 1;
+    // The slow timer runs only while the app is active; activation refreshes at once.
+    __block NSTimer *timer;
+    void (^setTimer)(BOOL) = ^(BOOL on) {
+        if (on && !timer) {
+            timer = [NSTimer scheduledTimerWithTimeInterval:3 repeats:YES block:^(__unused NSTimer *t) { refreshAll(); }];
+            timer.tolerance = 1;
+        } else if (!on) {
+            [timer invalidate];
+            timer = nil;
+        }
+    };
+    setTimer(NSApp.isActive);
+    [nc addObserverForName:NSApplicationDidResignActiveNotification object:nil queue:nil usingBlock:^(__unused NSNotification *n) {
+        setTimer(NO);
+    }];
+    [nc addObserverForName:NSApplicationDidBecomeActiveNotification object:nil queue:nil usingBlock:^(__unused NSNotification *n) {
+        setTimer(YES);
+        refreshAll();
+    }];
     [NSNotificationCenter.defaultCenter addObserverForName:TweakSettingsDidChangeNotification object:nil queue:nil
                                                 usingBlock:^(__unused NSNotification *n) {
         for (NSView *c in gContainers.allObjects) {

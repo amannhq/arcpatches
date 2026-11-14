@@ -78,6 +78,7 @@ BOOL TweakNavBarOpenEditor(NSWindow *window, NSRect anchorInWindow) {
     gAnchorRect = anchorInWindow;
     gAnchorSeen = NO;
     gAnchorTime = NSDate.timeIntervalSinceReferenceDate;
+    TweakNavBarUpdateTimer();   // its tick ends the anchor
     clickView(field);
     TweakNavBarSetRevealed(pane, NO);
     NSView *pop = openPopover(window);
@@ -89,6 +90,8 @@ void TweakNavBarEditorInstall(void) {
     if (popoverClass()) origPopoverSetFrame = (void *)TweakHook(popoverClass(), @selector(setFrame:), (IMP)hookedPopoverSetFrame);
     else NSLog(@"[arcpatches] DynamicPopover root not found; editor opens at the top");
 }
+
+BOOL TweakNavBarEditorAnchored(void) { return gAnchorWindow != nil; }
 
 void TweakNavBarEditorTick(void) {
     // The anchor lasts for one editing session (or 2 s if the editor never opened).

@@ -255,8 +255,19 @@ static void installTopRow(void) {
         [nc addObserverForName:n object:nil queue:nil usingBlock:^(NSNotification *note) {
             NSWindow *w = note.object;
             BOOL exiting = n == NSWindowWillExitFullScreenNotification;
-            objc_setAssociatedObject(w, kExitingKey, exiting ? @YES : nil, OBJC_ASSOCIATION_RETAIN);
+            id token = exiting ? [NSObject new] : nil;
+            objc_setAssociatedObject(w, kExitingKey, token, OBJC_ASSOCIATION_RETAIN);
             reapplyWindow(w);
+            // A failed exit has no notification (only the delegate's windowDidFailToExitFullScreen:,
+            // which is Dia's): if no DidExit came, the window stayed in full screen.
+            if (!exiting) return;
+            __weak NSWindow *weakWindow = w;
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                NSWindow *sw = weakWindow;
+                if (!sw || objc_getAssociatedObject(sw, kExitingKey) != token) return;
+                objc_setAssociatedObject(sw, kExitingKey, nil, OBJC_ASSOCIATION_RETAIN);
+                reapplyWindow(sw);
+            });
         }];
     [nc addObserverForName:TweakSettingsDidChangeNotification object:nil queue:nil usingBlock:^(__unused NSNotification *n) {
         reapplyWindow(nil);

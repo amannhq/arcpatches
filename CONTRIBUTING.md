@@ -56,7 +56,7 @@ Things to know:
 The browser's UI is native AppKit. Most patches find a view by its class and change it after layout.
 
 1. Look up class names in the binary with `strings -a /Applications/Dia.app/Contents/MacOS/Dia | grep _TtC`. Swift class names are mangled: for example `TabSidebar.SidebarHeaderView` is `_TtC10TabSidebar17SidebarHeaderView`.
-2. Inspect the live view tree with the probes in `tools/`. `tools/inspect.m` dumps views with their classes and frames.
+2. Inspect the live view tree with the probes in `tools/`. `tools/inspect.m` dumps views with their classes and frames. The in-browser dump (`src/core/DevDump.m`) is off by default: turn it on with `defaults write company.thebrowser.dia arcpatches.devTools -bool YES` and relaunch the browser.
 3. Hook as little as you can: one method, usually `layout`, with the original always called first. Check that the class exists before hooking it. If it's missing, switch the feature off and report it through the health list rather than crashing.
 
 ## Coding guidelines
