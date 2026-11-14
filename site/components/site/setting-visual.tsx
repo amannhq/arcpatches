@@ -45,7 +45,7 @@ export function StateVisual({
         ))}
       </div>
       <Segmented
-        label="Show"
+        label={`Show ${title}`}
         options={states.map((s) => s.label)}
         defaultValue={states[initial].label}
         onValueChange={(label) => setIndex(Math.max(0, states.findIndex((s) => s.label === label)))}
@@ -101,12 +101,14 @@ function FramePlayer({ frames, fps, alt }: { frames: string[]; fps: number; alt:
   )
 }
 
-export function DemoVisual({ demo, label }: { demo: DemoAsset; label: string }) {
+// Under Reduce Motion an animated image shows its poster, or else the setting's own still.
+export function DemoVisual({ demo, label, still }: { demo: DemoAsset; label: string; still: string | null }) {
   if (!demo) return <Placeholder text={`${label} (animation coming)`} />
   if (demo.kind === "frames") return <FramePlayer frames={demo.frames} fps={demo.fps} alt={label} />
+  const poster = demo.poster ?? still
   return (
     <picture>
-      {demo.poster && <source media="(prefers-reduced-motion: reduce)" srcSet={demo.poster} />}
+      {poster && <source media="(prefers-reduced-motion: reduce)" srcSet={poster} />}
       {/* eslint-disable-next-line @next/next/no-img-element -- static export */}
       <img src={demo.src} alt={label} loading="lazy" decoding="async" draggable={false} />
     </picture>

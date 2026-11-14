@@ -27,7 +27,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${GeistSans.variable} ${GeistMono.variable}`}>
       <body>
-        <Hardware className="ap" keyColor={{ l: 0.79, c: 0.16, h: 78 }}>
+        <Hardware className="ap" keyColor={{ l: 0.82, c: 0.16, h: 78 }}>
           {children}
           <Toasts />
         </Hardware>

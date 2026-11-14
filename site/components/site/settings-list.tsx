@@ -20,6 +20,7 @@ function commandsFor(s: Setting): string[] | null {
 
 function SettingCard({ s }: { s: Setting }) {
   const id = `setting-${slug(s.key)}`
+  const states = statesFor(s)
   return (
     <article className="glass setting" aria-labelledby={id}>
       <div className="setting-text">
@@ -49,12 +50,12 @@ function SettingCard({ s }: { s: Setting }) {
         </dl>
         {s.demo && (
           <figure className="demo">
-            <DemoVisual demo={demoFor(s.demo)} label={DEMO_LABELS[s.demo]} />
+            <DemoVisual demo={demoFor(s.demo)} label={DEMO_LABELS[s.demo]} still={states[initialIndex(s)].src} />
             <figcaption>{DEMO_LABELS[s.demo]}</figcaption>
           </figure>
         )}
       </div>
-      <StateVisual title={s.title} states={statesFor(s)} initial={initialIndex(s)} commands={commandsFor(s)} />
+      <StateVisual title={s.title} states={states} initial={initialIndex(s)} commands={commandsFor(s)} />
     </article>
   )
 }

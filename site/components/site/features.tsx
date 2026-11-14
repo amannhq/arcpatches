@@ -40,7 +40,7 @@ const EXTRAS = [
   {
     icon: Maximize2,
     title: "Full-window pages",
-    body: "The top toolbar is gone, so pages use the whole window. Hover the top edge to bring it back.",
+    body: "The top toolbar is gone, so pages use the whole window. Turn on Reveal top bar on hover to bring it back at the top edge.",
   },
   {
     icon: Keyboard,

@@ -1,0 +1,55 @@
+/* ── Tables ──────────────────────────────────────────────────────────── */
+
+.table-scroll {
+  overflow-x: auto;
+  border-radius: 14px;
+
+  & table {
+    width: 100%;
+    min-width: 560px;
+    border-collapse: collapse;
+    font-size: 14px;
+    text-align: left;
+  }
+
+  & caption {
+    caption-side: top;
+    padding: 0 0 8px;
+    text-align: left;
+    font: 600 12px/1 var(--font-geist-mono), monospace;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--amber);
+  }
+
+  & :is(th, td) {
+    padding: 11px 14px;
+    vertical-align: top;
+    border-bottom: 1px solid var(--hair);
+  }
+
+  & thead th {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--bone-3);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  & tbody th {
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  & td {
+    color: var(--bone-2);
+  }
+
+  & tr:last-child :is(th, td) {
+    border-bottom: 0;
+  }
+}
+
+.glass.table-scroll {
+  padding: 8px 6px;
+}
