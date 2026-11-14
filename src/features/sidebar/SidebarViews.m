@@ -101,14 +101,17 @@ NSColor *TweakPillFill(CGFloat darkAlpha, CGFloat lightAlpha) {
 - (void)mouseDown:(NSEvent *)e { [self openEditor]; }   // the buttons take their own clicks
 - (void)viewDidChangeEffectiveAppearance { [super viewDidChangeEffectiveAppearance]; [self updateAppearance:NO]; }
 
+// Hovered, or its site-controls popover is open (the pointer is in the popover then).
+- (BOOL)active { return self.hovering || self.siteButton.selected; }
+
 - (void)updateAppearance:(BOOL)animated {
-    TweakChromeSetFill(self, self.pill.layer, ArcFillColor(self.hovering ? ArcFillHover : ArcFillRest), animated);
+    TweakChromeSetFill(self, self.pill.layer, ArcFillColor(self.active ? ArcFillHover : ArcFillRest), animated);
     [self updateButtons];
 }
 
 - (void)updateButtons {
     NSString *u = self.currentURL;
-    BOOL on = self.hovering && [TweakSettings boolForKey:TweakKeySidebarPillButtons];
+    BOOL on = self.active && [TweakSettings boolForKey:TweakKeySidebarPillButtons];
     BOOL hasURL = u.length && ![u isEqualToString:@"about:blank"];
     BOOL copyShown = on && (hasURL || self.showingFeedback), siteShown = on && TweakSidebarURLIsSite(u);
     if (copyShown == self.copyWanted && siteShown == self.siteWanted) return;

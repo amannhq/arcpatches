@@ -19,6 +19,7 @@ NSColor *TweakPillFill(CGFloat darkAlpha, CGFloat lightAlpha);
 @property (nonatomic) BOOL hovering;
 @property (nonatomic) NSUInteger feedbackGeneration;
 @property (nonatomic) BOOL showingFeedback;   // label reads "Copied"
+- (void)updateAppearance:(BOOL)animated;   // fill and hover buttons, after hover or `selected` changes
 - (void)refresh;
 - (void)forceRefresh;
 - (BOOL)openEditor;

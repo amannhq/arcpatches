@@ -14,6 +14,15 @@
     return [self buttonWithSymbol:symbol label:label pointSize:ArcPillIcon radius:ArcRadiusSmall target:target action:action];
 }
 
+// While selected (its popover open) the pill keeps it shown, then fades it with the hover.
+- (void)setSelected:(BOOL)selected {
+    BOOL changed = selected != self.selected;
+    [super setSelected:selected];
+    NSView *v = self.superview;
+    while (v && ![v isKindOfClass:TweakSidebarURLBar.class]) v = v.superview;
+    if (changed) [(TweakSidebarURLBar *)v updateAppearance:YES];
+}
+
 @end
 
 #pragma mark - Copy link
