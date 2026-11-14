@@ -7,53 +7,11 @@
 
 #pragma mark - Icon button
 
-@interface TweakPillIconButton ()
-@property (nonatomic) BOOL hovering;
-@end
-
+// The top row's button (ChromeButton.m) at pill size: same fills, timing and tint.
 @implementation TweakPillIconButton
 
 + (instancetype)buttonWithSymbol:(NSString *)symbol label:(NSString *)label target:(id)target action:(SEL)action {
-    TweakPillIconButton *b = [[self alloc] initWithFrame:NSZeroRect];
-    b.bordered = NO;
-    b.title = @"";
-    b.imagePosition = NSImageOnly;
-    b.target = target;
-    b.action = action;
-    b.toolTip = label;
-    b.accessibilityLabel = label;
-    b.refusesFirstResponder = YES;   // never take focus from the page
-    b.focusRingType = NSFocusRingTypeNone;
-    b.symbolConfiguration = [NSImageSymbolConfiguration configurationWithPointSize:13 weight:NSFontWeightRegular];
-    b.contentTintColor = NSColor.secondaryLabelColor;
-    b.wantsLayer = YES;
-    b.layer.cornerRadius = 7;
-    b.layer.cornerCurve = kCACornerCurveContinuous;
-    [b setSymbol:symbol];
-    return b;
-}
-
-- (void)setSymbol:(NSString *)symbol {
-    self.image = [NSImage imageWithSystemSymbolName:symbol accessibilityDescription:self.accessibilityLabel];
-}
-
-- (void)updateTrackingAreas {
-    [super updateTrackingAreas];
-    for (NSTrackingArea *t in self.trackingAreas) [self removeTrackingArea:t];
-    [self addTrackingArea:[[NSTrackingArea alloc] initWithRect:NSZeroRect
-        options:NSTrackingMouseEnteredAndExited | NSTrackingActiveAlways | NSTrackingInVisibleRect owner:self userInfo:nil]];
-}
-
-- (void)mouseEntered:(NSEvent *)e { self.hovering = YES; [self updateFill]; }
-- (void)mouseExited:(NSEvent *)e { self.hovering = NO; [self updateFill]; }
-- (void)viewDidHide { [super viewDidHide]; self.hovering = NO; [self updateFill]; }
-- (void)viewDidChangeEffectiveAppearance { [super viewDidChangeEffectiveAppearance]; [self updateFill]; }
-
-- (void)updateFill {
-    NSColor *bg = self.hovering ? TweakPillFill(0.10, 0.06) : NSColor.clearColor;
-    [self.effectiveAppearance performAsCurrentDrawingAppearance:^{
-        self.layer.backgroundColor = bg.CGColor;
-    }];
+    return [self buttonWithSymbol:symbol label:label pointSize:ArcPillIcon radius:ArcRadiusSmall target:target action:action];
 }
 
 @end

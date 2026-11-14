@@ -5,17 +5,18 @@
 #import "Common.h"
 #import "Features.h"
 #import "Browser.h"
+#import "../sidebar/ChromeButton.h"
 #import <objc/runtime.h>
 
 NSString *const TweakKeyHideWindowButtonsInFullScreen = @"arcpatches.hideWindowButtonsInFullScreen";
 NSString *const TweakKeySidebarToggleButton = @"arcpatches.sidebarToggleButton";
 NSString *const TweakKeyTopRowProfileName = @"arcpatches.topRowProfileName";
 
-static const CGFloat kButtonSize = 26;      // same as the back/forward/reload buttons
-static const CGFloat kGap = 4;              // between the window buttons and the toggle
+static const CGFloat kButtonSize = TweakChromeTopRowSize;   // same as the back/forward/reload buttons
+static const CGFloat kGap = 1;              // between the window buttons and the toggle's fill
 static const CGFloat kLeadingInset = 8;     // until the window buttons' inset is known
 static const CGFloat kWindowButtonsEnd = 76;  // x after the window buttons, if they can't be found
-static const CGFloat kRightReserve = 96;    // the nav buttons' area on the right
+static const CGFloat kRightReserve = 3 * TweakChromeTopRowSize + 12;   // the nav buttons' area on the right
 static const void *kToggleKey = &kToggleKey;
 static const void *kInsetKey = &kInsetKey;
 static const void *kHidByUsKey = &kHidByUsKey;
@@ -50,21 +51,16 @@ static void toggleSidebar(NSWindow *window) {
     NSLog(@"[arcpatches] no menu item or responder handles %@; sidebar toggle did nothing", kDiaToggleSidebarAction);
 }
 
-@interface TweakSidebarToggleButton : NSButton
+// The same button as back/forward/reload (hover fill, pressed state, no focus ring).
+@interface TweakSidebarToggleButton : TweakChromeButton
 @end
 
 @implementation TweakSidebarToggleButton
-- (instancetype)initWithFrame:(NSRect)frame {
-    if (!(self = [super initWithFrame:frame])) return nil;
-    self.image = [NSImage imageWithSystemSymbolName:@"sidebar.left" accessibilityDescription:@"Toggle Sidebar"];
-    self.imagePosition = NSImageOnly;
-    self.bordered = NO;
-    self.toolTip = @"Hide or show the sidebar";
-    self.symbolConfiguration = [NSImageSymbolConfiguration configurationWithPointSize:13 weight:NSFontWeightMedium];
-    self.contentTintColor = NSColor.secondaryLabelColor;
-    self.target = self;
-    self.action = @selector(tap:);
-    return self;
++ (instancetype)toggle {
+    TweakSidebarToggleButton *b = [self buttonWithSymbol:@"sidebar.left" label:@"Hide or show the sidebar" pointSize:TweakChromeTopRowIcon
+                                                  radius:ArcRadiusMedium target:nil action:@selector(tap:)];
+    b.target = b;
+    return b;
 }
 - (void)tap:(id)sender { toggleSidebar(self.window); }
 @end
@@ -176,7 +172,7 @@ static void placeToggle(NSView *header, NSView *buttons) {
         return;
     }
     if (!toggle) {
-        toggle = [[TweakSidebarToggleButton alloc] initWithFrame:NSZeroRect];
+        toggle = [TweakSidebarToggleButton toggle];
         objc_setAssociatedObject(header, kToggleKey, toggle, OBJC_ASSOCIATION_RETAIN);
     }
     if (toggle.superview != header) [header addSubview:toggle];   // appended: never first

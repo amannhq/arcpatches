@@ -138,14 +138,41 @@ void TweakNavBarSetRevealed(NSView *pane, BOOL revealed) {
     applyPane(pane);
 }
 
-void TweakNavBarPerform(NSWindow *window, NSInteger index) {
-    // Prefer Dia's own (hidden) buttons so behaviour matches the stock bar.
+// Dia's own (hidden) back, forward and reload buttons of the window's focused pane.
+static NSArray<NSControl *> *diaNavControls(NSWindow *window) {
     NSView *bar = TweakChildOfClass(TweakNavBarFocusedPane(window), kDiaNavigationBarClass);
     NSMutableArray<NSControl *> *controls = [NSMutableArray array];
     for (NSView *row in bar.subviews)
         for (NSView *v in row.subviews)
             if ([NSStringFromClass(v.class) containsString:kDiaInteractiveIconControlName] && [v isKindOfClass:NSControl.class])
                 [controls addObject:(NSControl *)v];
+    return controls;
+}
+
+TweakNavState TweakNavBarState(NSWindow *window) {
+    TweakNavState s = {YES, YES, NO, NO};
+    NSArray<NSControl *> *c = diaNavControls(window);
+    if (c.count < 3) return s;
+    // Reload is never disabled: all three off means Dia parked the bar, not real state.
+    if (c[0].isEnabled || c[1].isEnabled || c[2].isEnabled) {
+        s.canGoBack = c[0].isEnabled;
+        s.canGoForward = c[1].isEnabled;
+        s.known = YES;
+    }
+    if (!c[2].action) return s;   // only Dia's own control can stop a load
+    @try {
+        s.loading = [[TweakActiveTabForWindow(window) valueForKey:kDiaTabLoadingKey] boolValue];
+    } @catch (__unused NSException *e) {
+        static BOOL logged;
+        if (!logged) { logged = YES; NSLog(@"[arcpatches] tab has no %@; reload never shows stop", kDiaTabLoadingKey); }
+    }
+    return s;
+}
+
+void TweakNavBarPerform(NSWindow *window, NSInteger index) {
+    // Prefer Dia's own (hidden) buttons so behaviour matches the stock bar; while
+    // loading, Dia's reload control is its stop control.
+    NSArray<NSControl *> *controls = diaNavControls(window);
     if (index < (NSInteger)controls.count && controls[index].action) {
         [controls[index] sendAction:controls[index].action to:controls[index].target];
         return;

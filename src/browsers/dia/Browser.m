@@ -24,6 +24,7 @@ NSString *const kDiaNavigationBarClass = @"NavigationBar.NavigationBarView";
 NSString *const kDiaNavigationCapsuleButtonClass = @"NavigationBar.NavigationBarCapsuleButton";
 NSString *const kDiaAssistantBarClass = @"NavigationBar.AssistantBarView";
 NSString *const kDiaInteractiveIconControlName = @"InteractiveIconControl";
+NSString *const kDiaTabLoadingKey = @"loading";
 
 NSString *const kDiaSidebarHeaderClass = @"TabSidebar.SidebarHeaderView";
 NSString *const kDiaProfileIndicatorSuffix = @"ProfileIndicatorWrapperView";
