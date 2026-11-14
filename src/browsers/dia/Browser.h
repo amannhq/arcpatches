@@ -25,6 +25,7 @@ extern NSString *const kDiaWebContentsHostClass;
 extern NSString *const kDiaFlippedViewClass;             // ARCUI's generic container
 extern NSString *const kDiaWindowStandardButtonsClass;   // the traffic lights in the sidebar header
 extern NSString *const kDiaToggleSidebarKey;             // View ▸ Auto-Hide Tabs: ⌘ + this key hides/shows the sidebar
+extern NSString *const kDiaDuplicateTabTitle;            // Tabs ▸ Duplicate Tab (no shortcut: found by title)
 
 #pragma mark - Top navigation bar
 

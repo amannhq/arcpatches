@@ -8,7 +8,7 @@
 #import "Browser.h"
 #import <objc/runtime.h>
 
-static const CGFloat kRowHeight = TWEAK_PILL_HEIGHT + 10;   // pill + 2 top + 8 bottom
+static const CGFloat kRowHeight = ArcPillHeight + 10;   // pill + 2 top + 8 bottom
 static const void *kBarKey = &kBarKey;
 static const void *kNavKey = &kNavKey;
 static const void *kGapKey = &kGapKey;
@@ -103,8 +103,9 @@ static void applyContainer(NSView *c) {
         // Vertically centre on the traffic lights' stack.
         NSView *stack = header.subviews.firstObject;
         CGFloat mid = stack ? NSMidY(stack.frame) : NSHeight(header.bounds) / 2;
-        CGFloat w = 3 * TweakChromeTopRowSize, h = TweakChromeTopRowSize;
-        nav.frame = NSMakeRect(NSWidth(header.bounds) - w - 8, round(mid - h / 2), w, h);
+        CGFloat w = 3 * ArcTopRowButton, h = ArcTopRowButton;
+        // Trailing edge on the URL pill's (ArcSidebarInset from the container's edge).
+        nav.frame = NSMakeRect(NSWidth(header.bounds) - w - ArcSidebarInset, round(mid - h / 2), w, h);
     } else {
         [nav removeFromSuperview];
     }

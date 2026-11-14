@@ -19,6 +19,7 @@ NSString *const kDiaWebContentsHostClass = @"WebContentsPaneHostView";
 NSString *const kDiaFlippedViewClass = @"ARCUI.FlippedView";
 NSString *const kDiaWindowStandardButtonsClass = @"ARCUI.WindowStandardButtons";
 NSString *const kDiaToggleSidebarKey = @"s";
+NSString *const kDiaDuplicateTabTitle = @"Duplicate Tab";
 
 NSString *const kDiaNavigationBarClass = @"NavigationBar.NavigationBarView";
 NSString *const kDiaNavigationCapsuleButtonClass = @"NavigationBar.NavigationBarCapsuleButton";

@@ -13,11 +13,11 @@ NSString *const TweakKeyHideWindowButtonsInFullScreen = @"arcpatches.hideWindowB
 NSString *const TweakKeySidebarToggleButton = @"arcpatches.sidebarToggleButton";
 NSString *const TweakKeyTopRowProfileName = @"arcpatches.topRowProfileName";
 
-static const CGFloat kButtonSize = TweakChromeTopRowSize;   // same as the back/forward/reload buttons
+static const CGFloat kButtonSize = ArcTopRowButton;   // same as the back/forward/reload buttons
 static const CGFloat kGap = 1;              // between the window buttons and the toggle's fill
-static const CGFloat kLeadingInset = 8;     // until the window buttons' inset is known
+static const CGFloat kLeadingInset = ArcSpace2;   // until the window buttons' inset is known
 static const CGFloat kWindowButtonsEnd = 76;  // x after the window buttons, if they can't be found
-static const CGFloat kRightReserve = 3 * TweakChromeTopRowSize + 12;   // the nav buttons' area on the right
+static const CGFloat kRightReserve = 3 * ArcTopRowButton + ArcSidebarInset + ArcSpace1;   // the nav buttons and their inset, plus a gap
 static const void *kToggleKey = &kToggleKey;
 static const void *kInsetKey = &kInsetKey;
 static const void *kHidByUsKey = &kHidByUsKey;
@@ -46,7 +46,7 @@ static void toggleSidebar(NSWindow *window) {
 
 @implementation TweakSidebarToggleButton
 + (instancetype)toggle {
-    TweakSidebarToggleButton *b = [self buttonWithSymbol:@"sidebar.left" label:@"Hide or show the sidebar" pointSize:TweakChromeTopRowIcon
+    TweakSidebarToggleButton *b = [self buttonWithSymbol:@"sidebar.left" label:@"Toggle Sidebar" pointSize:ArcTopRowIcon
                                                   radius:ArcRadiusMedium target:nil action:@selector(tap:)];
     b.target = b;
     return b;

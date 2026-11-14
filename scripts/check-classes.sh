@@ -99,7 +99,7 @@ fi
 value_of() { awk -v k="$1" '$1 == k { print $2 }' "$WORK/constants"; }
 while read -r name value; do
     case "$name" in
-        *BrowserID|*BundleID|*DisplayName|*AppPath|*ProfileFolder|*Key) continue ;;   # identity, shortcut letters, KVC keys
+        *BrowserID|*BundleID|*DisplayName|*AppPath|*ProfileFolder|*Key|*Title) continue ;;   # identity, shortcut letters, KVC keys, menu titles
         *Suffix) [ -n "$(value_of "${name%Suffix}Prefix")" ] && continue ;;   # checked with its prefix
     esac
     case "$value" in *://*) continue ;; esac   # URLs (e.g. chrome:// pages) aren't classes

@@ -4,11 +4,9 @@
 #import "SiteControlsData.h"
 #import "SidebarViews.h"
 
-// Private methods of the pill (SidebarViews.m, SidebarPillActions.m), sent only after respondsToSelector:.
+// A private method of the pill (SidebarViews.m), sent only after respondsToSelector:.
 @interface NSView (TweakSiteControlsPill)
-- (void)copyLink:(id)sender;
 - (void)updateButtons;
-- (void)updateFill;
 @end
 
 @interface TweakSiteControls : NSViewController <NSPopoverDelegate, NSSharingServicePickerDelegate>

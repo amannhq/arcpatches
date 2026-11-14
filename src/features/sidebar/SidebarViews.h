@@ -1,12 +1,8 @@
 // Private to the sidebar URL bar: its views (SidebarViews.m), its hover buttons
-// (SidebarPillActions.m) and the container layout that places them (Sidebar.m).
+// (SidebarPillActions.m), its mouse and copy handling (SidebarPillInput.m) and the
+// container layout that places them (Sidebar.m).
 #import "Common.h"
 #import "ChromeButton.h"
-
-#define TWEAK_PILL_HEIGHT 36   // Arc's sidebar URL bar
-
-// A fill that is white over dark sidebars and black over light ones.
-NSColor *TweakPillFill(CGFloat darkAlpha, CGFloat lightAlpha);
 
 @class TweakPillIconButton;
 
@@ -26,6 +22,12 @@ NSColor *TweakPillFill(CGFloat darkAlpha, CGFloat lightAlpha);
 - (BOOL)openEditor;
 @end
 
+// SidebarPillInput.m: clicks, drags, the context menu and "Copied".
+@interface TweakSidebarURLBar (Input) <NSDraggingSource>
+- (void)showCopiedFeedback;   // "Copied" in the label (and a checkmark), then the host again
+- (void)copyLink:(id)sender;   // the clean URL, then "Copied"
+@end
+
 // Back, forward and reload (stop while loading), next to the traffic lights. Back and
 // forward dim when Dia has no history that way.
 @interface TweakNavButtons : NSView
@@ -39,5 +41,5 @@ NSColor *TweakPillFill(CGFloat darkAlpha, CGFloat lightAlpha);
 @end
 
 BOOL TweakSidebarURLIsSite(NSString *url);         // http(s) with a host: has site controls
-BOOL TweakSidebarCopyURL(NSWindow *window);        // the active tab's URL to the pasteboard
+void TweakSidebarPillRegister(TweakSidebarURLBar *bar);   // for TweakSidebarShowCopiedFeedback (SidebarPillInput.m)
 void TweakSidebarOpenSiteControls(NSView *anchor);   // the site controls popover under anchor (SiteControlsPopover.m)

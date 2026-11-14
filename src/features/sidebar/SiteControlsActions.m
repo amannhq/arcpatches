@@ -2,7 +2,6 @@
 // first, so whatever it opens (a tab, a menu, Dia's own popups) gets focus.
 #import "SiteControlsInternal.h"
 #import "Browser.h"
-#import "../shortcuts/CleanURL.h"
 
 static NSString *const kWebStoreURL = @"https://chromewebstore.google.com";
 
@@ -20,15 +19,13 @@ static NSString *const kWebStoreURL = @"https://chromewebstore.google.com";
     if (service) { [self.popover close]; [self finish]; }
 }
 
-- (void)copyLink:(id)sender {
-    NSView *bar = self.anchor;
-    while (bar && ![bar isKindOfClass:TweakSidebarURLBar.class]) bar = bar.superview;
-    [self closeThen:^(NSWindow *w, NSString *u) {
-        // The pill's own copy shows "Copied" in its label.
-        if ([bar respondsToSelector:@selector(copyLink:)]) [bar copyLink:nil];
-        else if (!TweakSidebarCopyURL(w)) NSBeep();
-    }];
+// Both copies match ⌘⇧C and ⌘⇧⌥C (clean URL), and confirm in the pill's label.
+static void copyAndConfirm(NSWindow *w, BOOL markdown) {
+    if (TweakCopyPageLink(w, markdown)) TweakSidebarShowCopiedFeedback(w);
+    else NSBeep();
 }
+
+- (void)copyLink:(id)sender { [self closeThen:^(NSWindow *w, NSString *u) { copyAndConfirm(w, NO); }]; }
 
 - (void)screenshot:(id)sender {
     NSMenuItem *item = self.screenshotItem;
@@ -74,16 +71,7 @@ static NSString *const kWebStoreURL = @"https://chromewebstore.google.com";
 }
 
 - (void)copyMarkdown:(id)sender {
-    [self closeThen:^(NSWindow *w, NSString *u) {
-        NSString *title = nil;
-        @try {
-            id t = [TweakActiveTabForWindow(w) valueForKey:@"title"];
-            if ([t isKindOfClass:NSString.class]) title = t;
-        } @catch (__unused NSException *e) {}
-        NSPasteboard *pb = NSPasteboard.generalPasteboard;
-        [pb clearContents];
-        [pb setString:TweakMarkdownLink(title, TweakCleanURL(u)) forType:NSPasteboardTypeString];
-    }];
+    [self closeThen:^(NSWindow *w, NSString *u) { copyAndConfirm(w, YES); }];
 }
 
 - (void)viewSource:(id)sender {
