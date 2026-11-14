@@ -103,7 +103,7 @@ static void applyContainer(NSView *c) {
         NSView *stack = header.subviews.firstObject;
         CGFloat mid = stack ? NSMidY(stack.frame) : NSHeight(header.bounds) / 2;
         CGFloat w = 3 * TweakChromeTopRowSize, h = TweakChromeTopRowSize;
-        nav.frame = NSMakeRect(NSWidth(header.bounds) - w - 8, mid - h / 2, w, h);
+        nav.frame = NSMakeRect(NSWidth(header.bounds) - w - 8, round(mid - h / 2), w, h);
     } else {
         [nav removeFromSuperview];
     }

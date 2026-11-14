@@ -181,6 +181,14 @@ static void placeToggle(NSView *header, NSView *buttons) {
     CGFloat mid = row && row != toggle ? NSMidY(row.frame) : NSHeight(header.bounds) / 2;
     NSRect f = NSMakeRect(round(x), round(mid - kButtonSize / 2), kButtonSize, kButtonSize);
     setFrameIfChanged(toggle, f);
+    // Back/forward/reload are placed during the sidebar's layout, before Dia settles this
+    // row: put them on the toggle's line here, after it has.
+    for (NSView *v in header.subviews) {
+        if (![NSStringFromClass(v.class) isEqualToString:@"TweakNavButtons"]) continue;
+        NSRect nf = v.frame;
+        nf.origin.y = NSMinY(f);
+        setFrameIfChanged(v, nf);
+    }
     setHiddenIfChanged(toggle, NSMaxX(f) > NSWidth(header.bounds) - kRightReserve);
 }
 
