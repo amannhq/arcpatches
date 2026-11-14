@@ -9,6 +9,7 @@ NSString *const TweakKeyRevealOnHover = @"arcpatches.revealOnHover";
 NSString *const TweakKeyCmdLFocusesSidebar = @"arcpatches.cmdLFocusesSidebar";
 NSString *const TweakKeySidebarFullURL = @"arcpatches.sidebarShowsFullURL";
 NSString *const TweakKeySidebarNavButtons = @"arcpatches.sidebarShowsNavButtons";
+NSString *const TweakKeySidebarPillButtons = @"arcpatches.sidebarPillButtons";
 NSString *const TweakKeyTopBarWhenSidebarHidden = @"arcpatches.topBarWhenSidebarHidden";
 
 @implementation TweakSettings
@@ -21,6 +22,7 @@ NSString *const TweakKeyTopBarWhenSidebarHidden = @"arcpatches.topBarWhenSidebar
         TweakKeyCmdLFocusesSidebar: @YES,
         TweakKeySidebarFullURL: @NO,
         TweakKeySidebarNavButtons: @YES,
+        TweakKeySidebarPillButtons: @YES,
         TweakKeyHideAI: @YES,
         // Network blocking is opt-in; hiding AI UI only changes what's shown locally.
         TweakKeyBlockAI: @NO,

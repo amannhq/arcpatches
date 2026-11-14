@@ -73,3 +73,8 @@ extern NSString *const kDiaTabGroupPropertiesClass;
 extern NSString *const kDiaNavigationControllerClass;
 extern NSString *const kDiaAppConfigurationClass;
 extern NSString *const kDiaAIServiceClass;
+
+#pragma mark - Site controls
+
+extern NSString *const kDiaSiteControlsIdentifier;       // accessibility id of the bar's site control center button
+extern NSString *const kDiaSiteDetailsURLPrefix;         // + percent-encoded origin: Chromium's per-site settings

@@ -27,6 +27,7 @@ extern NSString *const TweakKeyRevealOnHover;
 extern NSString *const TweakKeyCmdLFocusesSidebar;
 extern NSString *const TweakKeySidebarFullURL;
 extern NSString *const TweakKeySidebarNavButtons;
+extern NSString *const TweakKeySidebarPillButtons;   // copy-link and site-controls buttons on hover
 extern NSString *const TweakKeyTopBarWhenSidebarHidden;
 extern NSString *const TweakKeyHideAI;
 extern NSString *const TweakKeyBlockAI;

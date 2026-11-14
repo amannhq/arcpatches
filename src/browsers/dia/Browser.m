@@ -55,3 +55,6 @@ NSString *const kDiaTabGroupPropertiesClass = @"ArcTabGroupProperties";
 NSString *const kDiaNavigationControllerClass = @"ArcWebContentsNavigationController";
 NSString *const kDiaAppConfigurationClass = @"ArcBrowserApplicationConfiguration";
 NSString *const kDiaAIServiceClass = @"ArcAIService";
+
+NSString *const kDiaSiteControlsIdentifier = @"siteControlCenterButton";
+NSString *const kDiaSiteDetailsURLPrefix = @"chrome://settings/content/siteDetails?site=";
