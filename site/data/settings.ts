@@ -74,6 +74,10 @@ export const SETTINGS: Setting[] = [
     title: "Sidebar toggle button", detail: "Shown after the window controls; hides and shows the sidebar with Dia's own command.",
   },
   {
+    key: "downloadsInFooter", group: "Top row", type: "bool", default: true,
+    title: "Downloads in the Sidebar Corner", detail: "Shows downloads at the bottom left of the sidebar, as Arc does, instead of next to the reload button.",
+  },
+  {
     key: "topRowProfileName", group: "Top row", type: "bool", default: false,
     title: "Profile name in top row", detail: "Dia shows the profile name in the sidebar header. Arc doesn't, and it can sit under the back and forward buttons.",
   },

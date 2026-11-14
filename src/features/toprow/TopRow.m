@@ -207,6 +207,7 @@ static void applyHeader(NSView *header) {
     if (buttons) applyWindowButtons(buttons, strip);
     placeToggle(header, buttons);
     applyProfileName(header);
+    TweakDownloadsReplace(header);
     gApplying = NO;
 }
 
@@ -233,6 +234,7 @@ static void reapplyWindow(NSWindow *w) {
 #pragma mark - Install
 
 static void installTopRow(void) {
+    TweakDownloadsInstall();
     [NSUserDefaults.standardUserDefaults registerDefaults:@{
         TweakKeyHideWindowButtonsInFullScreen: @YES,
         TweakKeySidebarToggleButton: @YES,

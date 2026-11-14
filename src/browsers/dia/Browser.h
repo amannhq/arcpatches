@@ -40,6 +40,8 @@ extern NSString *const kDiaTabLoadingKey;                // scripting tab's "loa
 extern NSString *const kDiaSidebarHeaderClass;
 extern NSString *const kDiaProfileIndicatorSuffix;        // the header's profile name ("Personal"), private class
 extern NSString *const kDiaSidebarFooterClass;
+extern NSString *const kDiaDownloadsButtonClass;         // the downloads button Dia puts in the top row
+extern NSString *const kDiaLibraryButtonClass;           // the footer's Library button, bottom left
 extern NSString *const kDiaSidebarRootPrefix;            // + suffix: SidebarContainerRootView
 extern NSString *const kDiaSidebarRootSuffix;
 extern NSString *const kDiaLibraryCellClass;             // "Chats" in the footer

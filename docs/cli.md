@@ -111,6 +111,7 @@ The site's [settings page](https://amannhq.github.io/arcpatches/settings/) shows
 | Key | Type | Default | Effect |
 | --- | --- | --- | --- |
 | `sidebarToggleButton` | bool | `YES` | **Sidebar toggle button** after the window buttons. |
+| `downloadsInFooter` | bool | `YES` | **Downloads in the Sidebar Corner.** Shows Dia's downloads button at the bottom left of the sidebar, as Arc does, instead of next to the reload button. |
 | `topRowProfileName` | bool | `NO` | **Profile name in top row.** Keeps Dia's profile name in the sidebar header. Arc shows none. |
 | `hideWindowButtonsInFullScreen` | bool | `YES` | **Hide window buttons in full screen.** The top row then starts with the toggle, as in Arc. |
 

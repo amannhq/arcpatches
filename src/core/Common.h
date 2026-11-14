@@ -41,6 +41,9 @@ extern NSString *const TweakKeyExtraShortcuts;
 extern NSString *const TweakKeyProfileNumberMods;
 extern NSString *const TweakKeyHideWindowButtonsInFullScreen;   // TopRow.m
 extern NSString *const TweakKeySidebarToggleButton;
+extern NSString *const TweakKeyDownloadsInFooter;   // Downloads.m: Dia's downloads button in the footer, bottom left (Arc)
+void TweakDownloadsInstall(void);
+void TweakDownloadsReplace(NSView *header);
 extern NSString *const TweakKeyTopRowProfileName;   // Dia's profile name in the top row (Arc shows none)
 
 typedef NS_ENUM(NSInteger, TweakCommandBarStyle) {
