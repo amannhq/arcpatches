@@ -40,7 +40,8 @@ Verification here means compile, run `./tests/run.sh`, and do static checks. A l
 | `./installer/build.sh` without `--no-install`, or with `--launch` | Kills the running `~/Applications/ArcPatches.app`, replaces it, and can open it. |
 | `open` on any `.app`, or `pkill`/`killall` on a browser | Launches or quits the user's browser. |
 | Anything that writes under `/Applications/Dia.app`, `~/Applications` or a browser profile | The user's real browser and data. Reading with `strings`, `otool` or `PlistBuddy -c Print` is fine. |
-| `tools/probe-*.m`, `tools/selftest*.m`, `tools/screenshots/*` | Dev probes injected into a running browser, so they need a live, patched Dia. |
+| `tools/probe-*.m`, `tools/selftest*.m` | Dev probes injected into a running browser, so they need a live, patched Dia. |
+| `tools/screenshots/companion.swift` | Can write a demo health report into the real `~/Library/Application Support` folder. (`shots.m` and `frame.swift` are safe: they render offscreen with demo data.) |
 | `git push`, or pushing tags | A human pushes. |
 
 The Dia on this machine may already be patched by another tool, so it is not a valid live test target even for a human. Static checks against its binary are still valid.
