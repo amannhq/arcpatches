@@ -32,7 +32,7 @@ These are the terms we use for the small interactions:
 | --- | --- | --- |
 | Spacing | `ArcSpace1–4` (4, 8, 12, 16), `ArcSidebarInset` (6) | 4-pt grid |
 | Radii | Small 7, Medium 8, Pill 10, Popover 14 | Always continuous corners (`ArcRound`) |
-| Sizes | Top-row button 28 / icon 14, pill 36, pill button 28 / icon 13, popover 272 wide, tile 34, row icon 30 | Hit areas are never smaller than 28 pt |
+| Sizes | Top-row button 32 / icon 15, pill 36, pill button 28 / icon 13, popover 272 wide, tile 34, row icon 30 | Hit areas are never smaller than 28 pt |
 | Type | URL 13 regular, row title 13 medium, subtitle 11, section header 12 semibold, chip 12 medium | System font only |
 | Fill | Rest 8%, hover 11%, pressed 16%, selected 14%, tile 7% | White on dark chrome, black on light (about 60% of the dark alpha) |
 | Icon colour | Secondary label, or tertiary when disabled | Never full-contrast labels in chrome |
@@ -40,7 +40,7 @@ These are the terms we use for the small interactions:
 
 ## Components
 
-- **Top row:** the sidebar toggle sits at the leading edge (after the window buttons, or at the inset in full screen), and back, forward and reload sit trailing. Each is a 28 pt square with a medium-radius hover fill.
+- **Top row:** the sidebar toggle sits at the leading edge (after the window buttons, or at the inset in full screen), and back, forward and reload sit trailing. Each is a 32 pt square with a medium-radius hover fill.
 - **URL pill:** shows the host only (no scheme, no `www.`, the port kept for local servers). On hover, the copy-link and site-controls buttons fade in at the trailing edge and the host truncates to make room. Clicking the text opens the address editor.
 - **Site controls popover:** in this order:
   1. a row of action tiles

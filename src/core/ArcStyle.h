@@ -22,8 +22,8 @@ static const CGFloat ArcRadiusPopover = 14;      // popovers and panels
 
 #pragma mark - Sizes
 
-static const CGFloat ArcTopRowButton = 28;       // toggle, back, forward, reload hit area
-static const CGFloat ArcTopRowIcon = 14;         // their SF Symbol point size
+static const CGFloat ArcTopRowButton = 32;       // toggle, back, forward, reload: hit area and hover fill
+static const CGFloat ArcTopRowIcon = 15;         // their SF Symbol point size (regular)
 static const CGFloat ArcPillHeight = 36;
 static const CGFloat ArcPillButton = 28;         // copy link, site controls
 static const CGFloat ArcPillIcon = 13;

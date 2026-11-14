@@ -62,3 +62,6 @@ NSString *const kDiaAIServiceClass = @"ArcAIService";
 
 NSString *const kDiaSiteControlsIdentifier = @"siteControlCenterButton";
 NSString *const kDiaSiteDetailsURLPrefix = @"chrome://settings/content/siteDetails?site=";
+NSString *const kDiaPinnedExtensionsViewClass = @"PinnedExtensions.PinnedExtensionsView";
+NSString *const kDiaCaptureScreenshotAction = @"captureScreenshot:";
+NSString *const kDiaExtensionDetailsURLPrefix = @"chrome://extensions/?id=";
