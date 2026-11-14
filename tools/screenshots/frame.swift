@@ -1,13 +1,27 @@
-// Dev tool: places shots.m's renders on a styled backdrop for the README.
-//   swift tools/screenshots/frame.swift <raw-dir> <out-dir>
+// Dev tool: places shots.m's renders, as glass panels, on backdrop.swift's poster art.
+//   swiftc -O -parse-as-library tools/screenshots/frame.swift tools/screenshots/backdrop.swift -o build/frame
+//   build/frame <raw-dir> <out-dir>
 // Reads the 2x renders in <raw-dir>; writes hero, sidebar, pill-hover, site-controls,
-// palette and editor PNGs (2x) to <out-dir>.
+// palette and editor PNGs (2x, opaque RGB) to <out-dir>.
 import AppKit
-
-let raw = URL(fileURLWithPath: CommandLine.arguments[1]), out = URL(fileURLWithPath: CommandLine.arguments[2])
-try? FileManager.default.createDirectory(at: out, withIntermediateDirectories: true)
+import CoreImage
+import ImageIO
+import UniformTypeIdentifiers
 
 func rgb(_ r: CGFloat, _ g: CGFloat, _ b: CGFloat, _ a: CGFloat = 1) -> NSColor { NSColor(srgbRed: r, green: g, blue: b, alpha: a) }
+
+/// The backdrop and its frosted copy for the image being drawn.
+struct Canvas {
+    let backdrop: CGImage, frosted: CGImage
+
+    init(pixels w: Int, _ h: Int, scene: Scene) {
+        backdrop = makeBackdrop(width: w, height: h, scene: scene)
+        frosted = frost(backdrop, sigma: 72)   // ~36 pt at 2x
+    }
+}
+
+var canvas: Canvas!
+var raw: URL!, out: URL!
 
 func load(_ name: String) -> NSImage {
     let img = NSImage(contentsOf: raw.appendingPathComponent(name))!
@@ -16,119 +30,102 @@ func load(_ name: String) -> NSImage {
     return img
 }
 
-var currentRep: NSBitmapImageRep!
-
-/// Warm near-black with soft amber glows, computed per pixel into the bitmap. Core
-/// Graphics dithers its gradients, and that noise made every PNG several times larger.
-func drawBackground(_ r: NSRect) {
-    NSGraphicsContext.current?.flushGraphics()
-    let rep = currentRep!, w = rep.pixelsWide, h = rep.pixelsHigh, bpr = rep.bytesPerRow, data = rep.bitmapData!
-    let span = CGFloat(max(w, h))
-    // (colour, centre x, centre y from the bottom, radius, strength), added like light.
-    let glows: [([CGFloat], CGFloat, CGFloat, CGFloat, CGFloat)] = [
-        ([1.00, 0.70, 0.02], 0.12, 1.04, 0.45, 0.85),   // yellow, rising at the top left
-        ([1.00, 0.45, 0.05], 0.98, -0.04, 0.45, 0.65),  // amber, bottom right
-    ]
-    func falloff(_ d: CGFloat) -> CGFloat {   // 1 at the centre, 0.35 at 45%, 0 at the edge
-        d >= 1 ? 0 : d < 0.45 ? 1 - 0.65 * d / 0.45 : 0.35 * (1 - (d - 0.45) / 0.55)
-    }
-    for j in 0..<h {
-        let y = 1 - CGFloat(j) / CGFloat(h)
-        for i in 0..<w {
-            let x = CGFloat(i) / CGFloat(w)
-            let t = min(1, max(0, (x + (1 - y)) / 2))   // top left to bottom right
-            let base: CGFloat = t < 0.5 ? 0.08 + 0.04 * t : 0.10 - 0.08 * (t - 0.5)
-            var c = [base, base * 0.95, base * 0.85]
-            for g in glows {
-                let dx = (x - g.1) * CGFloat(w), dy = (y - g.2) * CGFloat(h)
-                let k = falloff((dx * dx + dy * dy).squareRoot() / (g.3 * span)) * g.4
-                for n in 0..<3 { c[n] += g.0[n] * k }
-            }
-            let p = data + j * bpr + i * 4
-            for n in 0..<3 { p[n] = UInt8(min(255, (c[n] * 255).rounded())) }
-            p[3] = 255
-        }
-    }
+/// A glass panel: shadow, the frosted backdrop clipped to the panel, an optional tint,
+/// `content`, then a 1-px inner highlight.
+func glass(_ frame: NSRect, radius: CGFloat, tint: NSColor? = nil, _ content: () -> Void) {
+    let shape = NSBezierPath(roundedRect: frame, xRadius: radius, yRadius: radius)
+    let cg = NSGraphicsContext.current!.cgContext
+    NSGraphicsContext.saveGraphicsState()
+    let sh = NSShadow(); sh.shadowColor = rgb(0.02, 0.05, 0.07, 0.6); sh.shadowBlurRadius = 44; sh.shadowOffset = NSSize(width: 0, height: -20); sh.set()
+    rgb(0.05, 0.06, 0.07).setFill(); shape.fill()
+    NSGraphicsContext.restoreGraphicsState()
+    NSGraphicsContext.saveGraphicsState()
+    shape.addClip()
+    let full = NSRect(x: 0, y: 0, width: CGFloat(canvas.frosted.width) / 2, height: CGFloat(canvas.frosted.height) / 2)
+    cg.draw(canvas.frosted, in: full)
+    if let tint { tint.setFill(); frame.fill(using: .sourceOver) }
+    content()
+    NSGraphicsContext.restoreGraphicsState()
+    let edge = NSBezierPath(roundedRect: frame.insetBy(dx: 0.5, dy: 0.5), xRadius: radius - 0.5, yRadius: radius - 0.5)
+    rgb(1, 1, 1, 0.12).setStroke(); edge.lineWidth = 1; edge.stroke()
 }
 
-/// A render with a soft shadow; its own corners are already drawn by shots.m.
-@discardableResult
-func drawCard(_ img: NSImage, at origin: NSPoint, radius: CGFloat = 14) -> NSRect {
+/// A render as a glass panel; the render carries its own translucent tint.
+func panel(_ img: NSImage, at origin: NSPoint, radius: CGFloat = 14) {
     let frame = NSRect(origin: origin, size: img.size)
-    let shape = NSBezierPath(roundedRect: frame, xRadius: radius, yRadius: radius)
-    NSGraphicsContext.saveGraphicsState()
-    let sh = NSShadow(); sh.shadowColor = rgb(0, 0, 0, 0.55); sh.shadowBlurRadius = 40; sh.shadowOffset = NSSize(width: 0, height: -18); sh.set()
-    rgb(0.12, 0.12, 0.13).setFill(); shape.fill()
-    NSGraphicsContext.restoreGraphicsState()
-    NSGraphicsContext.saveGraphicsState(); shape.addClip()
-    img.draw(in: frame)
-    NSGraphicsContext.restoreGraphicsState()
-    rgb(1, 1, 1, 0.10).setStroke(); shape.lineWidth = 1; shape.stroke()
-    return frame
+    glass(frame, radius: radius) { img.draw(in: frame) }
 }
 
 func caption(_ text: String, at p: NSPoint) {
-    let a: [NSAttributedString.Key: Any] = [.font: NSFont.systemFont(ofSize: 12, weight: .semibold), .foregroundColor: rgb(1, 1, 1, 0.58)]
+    let a: [NSAttributedString.Key: Any] = [.font: NSFont.systemFont(ofSize: 12, weight: .semibold), .foregroundColor: rgb(1, 1, 1, 0.72)]
     (text as NSString).draw(at: p, withAttributes: a)
 }
 
-func render(size: NSSize, to name: String, _ draw: (NSRect) -> Void) {
-    let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: Int(size.width * 2), pixelsHigh: Int(size.height * 2), bitsPerSample: 8,
-                               samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .calibratedRGB, bytesPerRow: 0, bitsPerPixel: 0)!
-    rep.size = size
+func render(size: NSSize, to name: String, scene: Scene, _ draw: (NSRect) -> Void) {
+    let w = Int(size.width * 2), h = Int(size.height * 2)
+    canvas = Canvas(pixels: w, h, scene: scene)
+    let cg = CGContext(data: nil, width: w, height: h, bitsPerComponent: 8, bytesPerRow: 0,
+                       space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue)!
+    cg.draw(canvas.backdrop, in: CGRect(x: 0, y: 0, width: w, height: h))
+    cg.scaleBy(x: 2, y: 2)
     NSGraphicsContext.saveGraphicsState()
-    currentRep = rep
-    NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
+    NSGraphicsContext.current = NSGraphicsContext(cgContext: cg, flipped: false)
     draw(NSRect(origin: .zero, size: size))
     NSGraphicsContext.restoreGraphicsState()
-    try! rep.representation(using: .png, properties: [:])!.write(to: out.appendingPathComponent(name))
-    print("wrote", out.appendingPathComponent(name).path)
+    let url = out.appendingPathComponent(name)
+    let dest = CGImageDestinationCreateWithURL(url as CFURL, UTType.png.identifier as CFString, 1, nil)!
+    posterise(cg)
+    CGImageDestinationAddImage(dest, cg.makeImage()!, [kCGImagePropertyDPIWidth: 144, kCGImagePropertyDPIHeight: 144] as CFDictionary)
+    CGImageDestinationFinalize(dest)
+    print("wrote", url.path)
 }
 
-/// One render centred on the backdrop.
-func single(_ name: String, pad: CGFloat = 64, radius: CGFloat = 14) {
+/// One render centred on its own scene.
+func single(_ name: String, scene: Scene, pad: CGFloat = 72, radius: CGFloat = 14) {
     let img = load(name)
-    render(size: NSSize(width: img.size.width + pad * 2, height: img.size.height + pad * 2), to: name) { r in
-        drawBackground(r)
-        drawCard(img, at: NSPoint(x: pad, y: pad + 6), radius: radius)
+    render(size: NSSize(width: img.size.width + pad * 2, height: img.size.height + pad * 2), to: name, scene: scene) { _ in
+        panel(img, at: NSPoint(x: pad, y: pad + 6), radius: radius)
     }
 }
 
-// 1. Hero: the sidebar, with the ⌘T palette beside it at the height Arc puts it.
-let sidebar = load("sidebar.png"), palette = load("palette.png")
-let gap: CGFloat = 44, pad: CGFloat = 56
-let heroSize = NSSize(width: pad * 2 + sidebar.size.width + gap + palette.size.width, height: pad * 2 + sidebar.size.height)
-render(size: heroSize, to: "hero.png") { r in
-    drawBackground(r)
-    drawCard(sidebar, at: NSPoint(x: pad, y: pad), radius: 12)
-    let top = r.maxY - pad - sidebar.size.height * 0.18
-    drawCard(palette, at: NSPoint(x: pad + sidebar.size.width + gap, y: top - palette.size.height))
-}
+@main
+struct Frame {
+    static func main() {
+        raw = URL(fileURLWithPath: CommandLine.arguments[1]); out = URL(fileURLWithPath: CommandLine.arguments[2])
+        try? FileManager.default.createDirectory(at: out, withIntermediateDirectories: true)
 
-// 2. Single renders.
-single("sidebar.png", radius: 12)
-single("site-controls.png")
-single("palette.png")
-single("editor.png")
+        // 1. Hero: the sidebar, with the ⌘T palette beside it at the height Arc puts it.
+        let sidebar = load("sidebar.png"), palette = load("palette.png")
+        let gap: CGFloat = 48, pad: CGFloat = 64
+        let heroSize = NSSize(width: pad * 2 + sidebar.size.width + gap + palette.size.width, height: pad * 2 + sidebar.size.height)
+        render(size: heroSize, to: "hero.png", scene: Scene(seed: 11, sun: (0.80, 0.30, 0.20))) { r in
+            panel(sidebar, at: NSPoint(x: pad, y: pad), radius: 12)
+            let top = r.maxY - pad - sidebar.size.height * 0.30
+            panel(palette, at: NSPoint(x: pad + sidebar.size.width + gap, y: top - palette.size.height))
+        }
 
-// 3. The URL pill at rest, under the pointer, and with no page open.
-let states = [("At rest", load("pill-rest.png")), ("Hover: copy link and site controls", load("pill-hover.png")),
-              ("No page open", load("pill-empty.png"))]
-let pillW = states[0].1.size.width, rowH = states[0].1.size.height + 24
-let panel = NSSize(width: pillW, height: rowH * CGFloat(states.count) + 12)
-render(size: NSSize(width: panel.width + 128, height: panel.height + 128), to: "pill-hover.png") { r in
-    drawBackground(r)
-    let frame = NSRect(x: 64, y: 64, width: panel.width, height: panel.height)
-    let shape = NSBezierPath(roundedRect: frame, xRadius: 12, yRadius: 12)
-    NSGraphicsContext.saveGraphicsState()
-    let sh = NSShadow(); sh.shadowColor = rgb(0, 0, 0, 0.55); sh.shadowBlurRadius = 40; sh.shadowOffset = NSSize(width: 0, height: -18); sh.set()
-    rgb(0.135, 0.135, 0.145).setFill(); shape.fill()
-    NSGraphicsContext.restoreGraphicsState()
-    rgb(1, 1, 1, 0.10).setStroke(); shape.lineWidth = 1; shape.stroke()
-    var y = frame.maxY - 6
-    for (label, img) in states {
-        y -= rowH
-        caption(label, at: NSPoint(x: frame.minX + 12, y: y + img.size.height + 4))
-        img.draw(in: NSRect(x: frame.minX, y: y, width: img.size.width, height: img.size.height))
+        // 2. Single renders, each on its own seed of the same landscape.
+        single("sidebar.png", scene: Scene(seed: 23, sun: (0.72, 0.22, 0.13)), radius: 12)
+        single("site-controls.png", scene: Scene(seed: 5, sun: (0.25, 0.20, 0.14)))
+        single("palette.png", scene: Scene(seed: 41, sun: (0.15, 0.34, 0.26)))
+        single("editor.png", scene: Scene(seed: 8, sun: (0.84, 0.30, 0.22)))
+
+        // 3. The URL pill at rest, under the pointer, and with no page open, on one glass strip.
+        let states = [("At rest", load("pill-rest.png")), ("Hover: copy link and site controls", load("pill-hover.png")),
+                      ("No page open", load("pill-empty.png"))]
+        let pillW = states[0].1.size.width, rowH = states[0].1.size.height + 24
+        let strip = NSSize(width: pillW, height: rowH * CGFloat(states.count) + 12)
+        render(size: NSSize(width: strip.width + 144, height: strip.height + 144), to: "pill-hover.png",
+               scene: Scene(seed: 17, sun: (0.78, 0.24, 0.16))) { _ in
+            let frame = NSRect(x: 72, y: 72, width: strip.width, height: strip.height)
+            glass(frame, radius: 12, tint: rgb(0.07, 0.08, 0.09, 0.62)) {
+                var y = frame.maxY - 6
+                for (label, img) in states {
+                    y -= rowH
+                    caption(label, at: NSPoint(x: frame.minX + 12, y: y + img.size.height + 4))
+                    img.draw(in: NSRect(x: frame.minX, y: y, width: img.size.width, height: img.size.height))
+                }
+            }
+        }
     }
 }

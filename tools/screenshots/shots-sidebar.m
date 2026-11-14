@@ -17,7 +17,7 @@ static const CGFloat kPillRowH = 40; // TweakSidebarURLBar: the pill plus a litt
 - (void)build;
 @end
 
-NSColor *ShotSidebarColor(void) { return [NSColor colorWithSRGBRed:0.135 green:0.135 blue:0.145 alpha:1]; }
+NSColor *ShotSidebarColor(void) { return ShotGlassColor(); }
 
 static NSView *sidebarCard(CGFloat height) { return ShotCard(NSMakeSize(kWidth, height), ShotSidebarColor(), 0, NO); }
 
@@ -52,8 +52,8 @@ static TweakSidebarURLBar *pill(ShotPillState state, CGFloat y) {
     bar.appearance = [NSAppearance appearanceNamed:NSAppearanceNameDarkAqua];
     // Set directly: -refresh would ask a browser window for its URL.
     if (state != ShotPillEmpty) {
-        bar.currentURL = @"https://example.com/";
-        bar.label.stringValue = @"example.com";
+        bar.currentURL = @"https://nextjs.org/docs";
+        bar.label.stringValue = @"nextjs.org";
     }
     bar.hovering = state == ShotPillHover;
     [bar updateAppearance:NO];
@@ -70,13 +70,14 @@ static TweakSidebarURLBar *pill(ShotPillState state, CGFloat y) {
 #pragma mark - Favourites and tabs
 
 static void addFavourites(NSView *parent, CGFloat y) {
-    NSArray *letters = @[@"I", @"C", @"D", @"N", @"M", @"P", @"S", @"W"];
+    NSArray *sites = @[@"github.com", @"youtube.com", @"mail.google.com", @"figma.com",
+                       @"notion.so", @"slack.com", @"linear.app", @"wikipedia.org"];
     CGFloat inset = ArcSidebarInset, gap = ArcSpace2, h = 44;
     CGFloat w = (kWidth - 2 * inset - 3 * gap) / 4;
-    for (NSUInteger i = 0; i < letters.count; i++) {
+    for (NSUInteger i = 0; i < sites.count; i++) {
         NSView *tile = ShotCard(NSMakeSize(w, h), ArcFillColor(ArcFillTile), ArcRadiusPill, NO);
         tile.frameOrigin = NSMakePoint(inset + (i % 4) * (w + gap), y + (i / 4) * (h + gap));
-        NSImageView *icon = [NSImageView imageViewWithImage:ShotLetterIcon(letters[i], (NSInteger)i, 20)];
+        NSImageView *icon = [NSImageView imageViewWithImage:ShotSiteIcon(sites[i], 20)];
         icon.frame = NSMakeRect(round((w - 20) / 2), round((h - 20) / 2), 20, 20);
         [tile addSubview:icon];
         [parent addSubview:tile];
@@ -84,19 +85,20 @@ static void addFavourites(NSView *parent, CGFloat y) {
 }
 
 static CGFloat addTabs(NSView *parent, CGFloat y) {
-    NSArray *tabs = @[@[@"I", @0, @"Inbox"], @[@"C", @1, @"Calendar"], @[@"D", @2, @"Getting started"],
-                      @[@"E", @4, @"Design review notes"], @[@"D", @2, @"Changelog"]];
+    NSArray *tabs = @[@[@"nextjs.org", @"Next.js Docs"], @[@"github.com", @"vercel/next.js"],
+                      @[@"developer.apple.com", @"Swift Documentation"], @[@"news.ycombinator.com", @"Hacker News"],
+                      @[@"wikipedia.org", @"Wikipedia"]];
     CGFloat h = 34;
     for (NSUInteger i = 0; i <= tabs.count; i++) {
-        BOOL newTab = i == tabs.count, selected = i == 2;
+        BOOL newTab = i == tabs.count, selected = i == 0;
         NSView *row = ShotCard(NSMakeSize(kWidth - 2 * ArcSidebarInset, h), selected ? ArcFillColor(ArcFillSelected) : NSColor.clearColor, ArcRadiusMedium, NO);
         row.frameOrigin = NSMakePoint(ArcSidebarInset, y);
-        NSImage *img = newTab ? ArcSymbol(@"plus", ArcPillIcon, NSFontWeightMedium, nil) : ShotLetterIcon(tabs[i][0], [tabs[i][1] integerValue], 16);
+        NSImage *img = newTab ? ArcSymbol(@"plus", ArcPillIcon, NSFontWeightMedium, nil) : ShotSiteIcon(tabs[i][0], 16);
         NSImageView *icon = [NSImageView imageViewWithImage:img];
         icon.contentTintColor = ArcIconColor(YES);
         icon.frame = NSMakeRect(ArcSpace3 - 2, round((h - 16) / 2), 16, 16);
         [row addSubview:icon];
-        NSTextField *title = [NSTextField labelWithString:newTab ? @"New Tab" : tabs[i][2]];
+        NSTextField *title = [NSTextField labelWithString:newTab ? @"New Tab" : tabs[i][1]];
         title.font = ArcFontRowTitle();
         title.textColor = newTab ? ArcTextSecondary() : NSColor.labelColor;
         [title sizeToFit];
@@ -117,7 +119,7 @@ void ShotSidebar(NSString *dir) {
 
     NSArray *names = @[@"pill-rest.png", @"pill-hover.png", @"pill-empty.png"];
     for (ShotPillState s = ShotPillRest; s <= ShotPillEmpty; s++) {
-        NSView *card = sidebarCard(kPillRowH);
+        NSView *card = ShotCard(NSMakeSize(kWidth, kPillRowH), NSColor.clearColor, 0, NO);   // frame.swift tints the strip
         [card addSubview:pill(s, 0)];
         ShotWritePNG(card, [dir stringByAppendingPathComponent:names[s]]);
     }
@@ -156,12 +158,12 @@ void ShotSiteControls(NSString *dir) {
     NSApp.mainMenu = main;
 
     TweakSiteControls *c = [TweakSiteControls new];
-    c.url = @"https://example.com/";
+    c.url = @"https://nextjs.org/docs";
     c.extensions = TweakSiteExtensions(nil);
     NSView *content = c.view;
     content.appearance = [NSAppearance appearanceNamed:NSAppearanceNameDarkAqua];
     [c build];
-    NSView *card = ShotCard(content.frame.size, [NSColor colorWithSRGBRed:0.16 green:0.16 blue:0.17 alpha:1], ArcRadiusPopover, YES);
+    NSView *card = ShotCard(content.frame.size, ShotGlassColor(), ArcRadiusPopover, NO);
     [card addSubview:content];
     ShotWritePNG(card, [dir stringByAppendingPathComponent:@"site-controls.png"]);
 }

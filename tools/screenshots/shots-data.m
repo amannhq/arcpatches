@@ -1,5 +1,5 @@
 // Demo stand-ins for SiteControlsData.m (left out of the screenshot build), so the site
-// controls popover shows generic extensions and permissions, never the user's profile.
+// controls popover shows well-known public extensions and permissions, never the user's profile.
 #import "shots.h"
 #import "../../src/features/sidebar/SiteControlsData.h"
 
@@ -7,14 +7,15 @@
 @end
 
 NSArray<TweakSiteExtension *> *TweakSiteExtensions(void (^done)(NSArray<TweakSiteExtension *> *)) {
-    NSArray *demo = @[@[@"P", @"Password manager"], @[@"A", @"Ad blocker"], @[@"R", @"Reader view"],
-                      @[@"N", @"Notes"], @[@"T", @"Translate"]];
+    // Each extension's icon is its project site's favicon.
+    NSArray *demo = @[@[@"1password.com", @"1Password"], @[@"ublockorigin.com", @"uBlock Origin"],
+                      @[@"grammarly.com", @"Grammarly"], @[@"react.dev", @"React Developer Tools"]];
     NSMutableArray *list = [NSMutableArray array];
     for (NSUInteger i = 0; i < demo.count; i++) {
         TweakSiteExtension *e = [TweakSiteExtension new];
         e.identifier = [NSString stringWithFormat:@"demo%lu", (unsigned long)i];
         e.name = demo[i][1];
-        e.icon = ShotLetterIcon(demo[i][0], (NSInteger)i + 3, 20);
+        e.icon = ShotSiteIcon(demo[i][0], 20);
         [list addObject:e];
     }
     return list;
