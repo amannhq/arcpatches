@@ -102,7 +102,7 @@ static void applyContainer(NSView *c) {
         // Vertically centre on the traffic lights' stack.
         NSView *stack = header.subviews.firstObject;
         CGFloat mid = stack ? NSMidY(stack.frame) : NSHeight(header.bounds) / 2;
-        CGFloat w = 84, h = 28;
+        CGFloat w = 3 * TweakChromeTopRowSize, h = TweakChromeTopRowSize;
         nav.frame = NSMakeRect(NSWidth(header.bounds) - w - 8, mid - h / 2, w, h);
     } else {
         [nav removeFromSuperview];

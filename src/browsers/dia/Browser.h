@@ -32,6 +32,7 @@ extern NSString *const kDiaNavigationBarClass;
 extern NSString *const kDiaNavigationCapsuleButtonClass;
 extern NSString *const kDiaAssistantBarClass;            // the bar's URL field
 extern NSString *const kDiaInteractiveIconControlName;   // back/forward/reload (substring)
+extern NSString *const kDiaTabLoadingKey;                // scripting tab's "loading" key (Dia.sdef)
 
 #pragma mark - Tab sidebar
 
