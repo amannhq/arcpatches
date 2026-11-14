@@ -3,6 +3,8 @@
 // or cleared in Settings, and is stored as {keyCode, mods, chars} under
 // "arcpatches.shortcut.<action>".
 #import "Common.h"
+#import "Features.h"
+#import "Browser.h"
 #import <Carbon/Carbon.h>
 
 NSString *const TweakKeyExtraShortcuts = @"arcpatches.extraShortcuts";
@@ -29,7 +31,7 @@ static NSAppleEventDescriptor *inWindow(NSWindow *w, NSString *body) {
 
 static NSWindow *browserWindow(void) {
     NSWindow *w = NSApp.keyWindow ?: NSApp.mainWindow;
-    return [NSStringFromClass(w.class) isEqualToString:@"Window.PlatformWindow"] ? w : nil;
+    return [NSStringFromClass(w.class) isEqualToString:kDiaPlatformWindowClass] ? w : nil;
 }
 
 #pragma mark - Profiles
@@ -229,3 +231,6 @@ static NSString *keyName(NSEvent *e) {
 }
 
 @end
+
+// No hooks of its own: the entry point's key monitor calls TweakShortcutsHandle.
+const TweakFeature TweakFeatureShortcuts = {"shortcuts", {TWEAK_BROWSER_DIA}, NULL, NULL};

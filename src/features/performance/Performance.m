@@ -1,6 +1,8 @@
 // Performance: turns off Dia's on-device AI service and exposes a few Chromium
 // switches. Chromium switches are read once at launch.
 #import "Common.h"
+#import "Features.h"
+#import "Browser.h"
 #import <objc/runtime.h>
 
 NSString *const TweakKeyDisableOnDeviceAI = @"arcpatches.disableOnDeviceAI";
@@ -38,7 +40,7 @@ NSArray<NSString *> *TweakPerformanceSwitches(void) {
 }
 
 void TweakPerformanceInstall(void) {
-    Class ai = NSClassFromString(@"ArcAIService");
+    Class ai = NSClassFromString(kDiaAIServiceClass);
     if (ai) {
         origAIInitialize = (void *)TweakHook(ai, @selector(initialize:callback:), (IMP)hookedAIInitialize);
         origAIIsAvailable = (void *)TweakHook(ai, @selector(isAvailable), (IMP)hookedAIIsAvailable);
@@ -46,3 +48,5 @@ void TweakPerformanceInstall(void) {
         NSLog(@"[arcpatches] ArcAIService not found; on-device AI switch inactive");
     }
 }
+
+const TweakFeature TweakFeaturePerformance = {"performance", {TWEAK_BROWSER_DIA}, TweakPerformanceInstall, NULL};

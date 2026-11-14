@@ -1,7 +1,7 @@
 // Dev tool: renders the ArcPatches window for the README (dark mode, 2x).
 // Uses this Mac's real status; shows a demo feature list if there's no health report yet.
 //   swiftc -O -module-name ArcPatches -target arm64-apple-macos14 -o build/shots-companion \
-//     $(ls companion/Sources/*.swift | grep -v /main.swift) tools/screenshots/companion.swift
+//     $(ls installer/Sources/*.swift | grep -v /main.swift) tools/screenshots/companion.swift
 //   (run it from inside a .app's Contents/MacOS so Bundle.main finds VERSION)
 import AppKit
 import SwiftUI

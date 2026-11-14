@@ -1,7 +1,7 @@
 #!/bin/bash
 # One-time setup for signed ArcPatches updates.
 #  - Generates an ed25519 key pair.
-#  - Writes the public key to companion/update-public-key.txt (commit this; it's built into ArcPatches).
+#  - Writes the public key to installer/update-public-key.txt (commit this; it's built into ArcPatches).
 #  - Keeps the private key outside the repo, and prints how to store it as a GitHub secret
 #    so the release workflow can sign ArcPatches.zip.
 set -euo pipefail
@@ -9,7 +9,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 KEY_DIR="$HOME/.config/arcpatches"
 PRIVATE="$KEY_DIR/update-private-key"
-PUBLIC="$ROOT/companion/update-public-key.txt"
+PUBLIC="$ROOT/installer/update-public-key.txt"
 
 mkdir -p "$KEY_DIR"
 chmod 700 "$KEY_DIR"

@@ -8,11 +8,14 @@ trap 'rm -rf "$WORK"' EXIT
 pass() { echo "ok   $1"; }
 
 # 1. The patch and the companion compile without warnings.
+SOURCES=()
+while IFS= read -r f; do SOURCES+=("$f"); done < <(find "$ROOT/src" -name '*.m' | sort)
 clang -dynamiclib -arch arm64 -fobjc-arc -O2 -Wall -Werror -Wno-unused-function \
     -framework AppKit -framework QuartzCore -lsqlite3 -DARCPATCHES_VERSION="\"test\"" \
-    -o "$WORK/arcpatches.dylib" "$ROOT"/src/*.m
+    -I"$ROOT/src/core" -I"$ROOT/src/browsers/dia" \
+    -o "$WORK/arcpatches.dylib" "${SOURCES[@]}"
 pass "arcpatches.dylib builds"
-swiftc -O -swift-version 5 -module-name ArcPatches -target arm64-apple-macos14 -o "$WORK/ArcPatches" "$ROOT"/companion/Sources/*.swift
+swiftc -O -swift-version 5 -module-name ArcPatches -target arm64-apple-macos14 -o "$WORK/ArcPatches" "$ROOT"/installer/Sources/*.swift
 pass "companion builds"
 
 # 2. insert-dylib adds a weak load command and the binary still runs.

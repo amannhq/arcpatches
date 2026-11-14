@@ -22,7 +22,7 @@ jobs:
       - name: Tests
         run: ./tests/run.sh
       - name: Build ArcPatches.app
-        run: ./companion/build.sh --no-install
+        run: ./installer/build.sh --no-install
       - name: Upload build
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:

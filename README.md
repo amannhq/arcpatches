@@ -61,7 +61,7 @@ xcode-select --install
 git clone https://github.com/amannhq/arcpatches.git
 cd arcpatches
 ./tests/run.sh                          # tests that need no browser
-./companion/build.sh --launch           # build and open the ArcPatches app
+./installer/build.sh --launch           # build and open the ArcPatches app
 ```
 
 ## How it works

@@ -2,6 +2,7 @@
 // Dia's internals each feature relies on are still present. The companion app
 // shows this so a Dia update that breaks a feature doesn't go unnoticed.
 #import "Common.h"
+#import "Browser.h"
 #import <objc/runtime.h>
 
 #ifndef ARCPATCHES_VERSION
@@ -24,16 +25,16 @@ static BOOL hasScriptingWindows(void) {
 
 void TweakHealthWrite(void) {
     NSDictionary *checks = @{
-        @"URL bar hiding": @(NSClassFromString(@"ContentPane.ContentPaneView") && NSClassFromString(@"NavigationBar.NavigationBarView")),
-        @"Sidebar URL bar": @(TweakFindClass(@"_TtC10TabSidebar", @"SidebarContainerRootView") != nil),
-        @"Settings pane": @(hasMethod(@"Preferences.SidebarListView", @selector(tableView:viewForTableColumn:row:))),
+        @"URL bar hiding": @(NSClassFromString(kDiaContentPaneClass) && NSClassFromString(kDiaNavigationBarClass)),
+        @"Sidebar URL bar": @(TweakFindClass(kDiaSidebarRootPrefix, kDiaSidebarRootSuffix) != nil),
+        @"Settings pane": @(hasMethod(kDiaPreferencesListClass, @selector(tableView:viewForTableColumn:row:))),
         @"Command bar": @(hasScriptingWindows()),
         @"Tab sorting": @(TweakTabsAvailable()),
-        @"New tab without a tab": @(hasMethod(@"ArcWebContentsNavigationController", @selector(load:initiatorOrigin:transition:fromAddressBar:typedWithHttpScheme:))),
-        @"Dia editor anchoring": @(TweakFindClass(@"_TtCC14DynamicPopover", @"RootView") != nil),
-        @"Web engine blocking": @(hasMethod(@"ArcBrowserApplicationConfiguration", @selector(argv))),
-        @"Hide AI features": @(NSClassFromString(@"TabSidebar.SidebarContainerFooterView") && NSClassFromString(@"BoostCommandBar.ToolbarView")),
-        @"On-device AI off": @(hasMethod(@"ArcAIService", @selector(initialize:callback:))),
+        @"New tab without a tab": @(hasMethod(kDiaNavigationControllerClass, @selector(load:initiatorOrigin:transition:fromAddressBar:typedWithHttpScheme:))),
+        @"Dia editor anchoring": @(TweakFindClass(kDiaPopoverRootPrefix, kDiaPopoverRootSuffix) != nil),
+        @"Web engine blocking": @(hasMethod(kDiaAppConfigurationClass, @selector(argv))),
+        @"Hide AI features": @(NSClassFromString(kDiaSidebarFooterClass) && NSClassFromString(kDiaEditorToolbarClass)),
+        @"On-device AI off": @(hasMethod(kDiaAIServiceClass, @selector(initialize:callback:))),
     };
     NSDictionary *info = NSBundle.mainBundle.infoDictionary;
     NSDictionary *report = @{

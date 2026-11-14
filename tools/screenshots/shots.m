@@ -2,10 +2,10 @@
 // from the real view code, with generic demo content (no personal data, no
 // third-party logos). Output: <dir>/commandbar.png, <dir>/settings.png (2x).
 //
-//   clang -fobjc-arc -framework AppKit -framework QuartzCore -lsqlite3 \
-//     tools/screenshots/shots.m $(ls src/*.m | grep -v ArcPatches.m) -o build/shots && build/shots build/shots-out
+//   clang -fobjc-arc -framework AppKit -framework QuartzCore -lsqlite3 -Isrc/core -Isrc/browsers/dia \
+//     tools/screenshots/shots.m $(find src -name '*.m' ! -name ArcPatches.m) -o build/shots && build/shots build/shots-out
 #import <AppKit/AppKit.h>
-#import "../../src/CommandSources.h"
+#import "../../src/features/commandbar/CommandSources.h"
 
 static NSImage *letterIcon(NSString *letter, NSColor *color) {
     return [NSImage imageWithSize:NSMakeSize(20, 20) flipped:NO drawingHandler:^BOOL(NSRect r) {

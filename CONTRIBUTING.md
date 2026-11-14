@@ -20,8 +20,10 @@ Thanks for helping. This guide covers how the project is organised, how to work 
 
 | Path | Contents |
 | --- | --- |
-| `src/` | `arcpatches.dylib`, which is loaded into the browser. Objective-C, with one area per file or folder: sidebar, command bar, privacy and so on. |
-| `companion/` | The ArcPatches menu bar app (Swift). It clones, patches, re-signs and restores the browser, and updates itself. |
+| `src/core/` | The browser-agnostic runtime of `arcpatches.dylib`: entry point, feature registry, hook helpers, settings, health. |
+| `src/browsers/<name>/` | One descriptor per browser: bundle id, app path, profile folder, and the names of the classes that features hook. |
+| `src/features/<name>/` | One folder per feature (sidebar, command bar, privacy and so on). Each one declares the browsers it supports. |
+| `installer/` | The ArcPatches menu bar app (Swift). It clones, patches, re-signs and restores the browser, and updates itself. |
 | `tools/` | `insert-dylib.c` (adds the weak load command), release signing, and development probes. |
 | `tests/run.sh` | Tests that need no browser. CI runs them on every push and pull request. |
 | `.github/` | CI, the release pipeline, and issue and PR templates. |
@@ -34,7 +36,7 @@ You need a Mac with Apple silicon, macOS 14 or later, and Xcode or the Command L
 git clone https://github.com/amannhq/arcpatches.git
 cd arcpatches
 ./tests/run.sh                         # builds everything and runs the tests
-./companion/build.sh --no-install      # builds build/ArcPatches.app without installing it
+./installer/build.sh --no-install      # builds build/ArcPatches.app without installing it
 ```
 
 ### Trying a change in the browser

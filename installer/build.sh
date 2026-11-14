@@ -2,9 +2,9 @@
 # Builds ~/Applications/ArcPatches.app: the menu bar companion, with the arcpatches
 # dylib bundled so it can patch Dia without a compiler.
 #
-#   ./companion/build.sh               build and install
-#   ./companion/build.sh --launch      build, install, and open it
-#   ./companion/build.sh --no-install  build only (build/ArcPatches.app; used by CI)
+#   ./installer/build.sh               build and install
+#   ./installer/build.sh --launch      build, install, and open it
+#   ./installer/build.sh --no-install  build only (build/ArcPatches.app; used by CI)
 set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -19,10 +19,13 @@ UPDATE_KEY="${ARCPATCHES_UPDATE_PUBLIC_KEY:-$(cat "$HERE/update-public-key.txt" 
 rm -rf "$OUT"
 mkdir -p "$OUT/Contents/MacOS" "$OUT/Contents/Resources"
 
-# The patch itself.
+# The patch itself: every .m under src/ (core, browsers, features); headers resolve via -I.
+SOURCES=()
+while IFS= read -r f; do SOURCES+=("$f"); done < <(find "$ROOT/src" -name '*.m' | sort)
 clang -dynamiclib -arch arm64 -fobjc-arc -O2 -Wall -Wno-unused-function \
     -framework AppKit -framework QuartzCore -lsqlite3 -DARCPATCHES_VERSION="\"$VERSION\"" \
-    -o "$OUT/Contents/Resources/arcpatches.dylib" "$ROOT"/src/*.m
+    -I"$ROOT/src/core" -I"$ROOT/src/browsers/dia" \
+    -o "$OUT/Contents/Resources/arcpatches.dylib" "${SOURCES[@]}"
 cp "$ROOT/entitlements.plist" "$OUT/Contents/Resources/"
 echo "$VERSION" > "$OUT/Contents/Resources/VERSION"
 
