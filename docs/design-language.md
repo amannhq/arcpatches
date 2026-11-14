@@ -14,6 +14,18 @@ The sizes come from measuring Arc 1.x on macOS. Everything is drawn with Apple's
 5. **Disabled is quieter, not gone.** A control that can't act (forward with no history) stays in place at tertiary contrast, so the layout never jumps.
 6. **Native first.** Use real `NSPopover`, `NSMenu`, `NSSharingServicePicker` and system materials, so behaviour (Escape, click-outside, VoiceOver, light and dark) is free and correct.
 
+## Vocabulary
+
+These are the terms we use for the small interactions:
+
+- **Microinteraction:** one small cycle of trigger → rules → feedback, such as hovering the pill to reveal its buttons, or copying a link and seeing "Copied".
+- **Interaction states:** rest, hover, pressed, focus, selected/open, disabled and loading. They're separate dimensions: a control can be disabled and loading, or open and hovered. Design every combination that can actually happen.
+- **Reveal on hover** (a form of *progressive disclosure*): secondary actions appear only where and when they're relevant. In-place reveals must also be reachable from the keyboard, for example with ⌘L or a menu.
+- **Feedback:** an immediate, truthful answer to every action. It should happen where the action happened, and never report success before the action is done.
+- **Affordance and anti-affordance:** a control should look as usable as it is. A dimmed forward arrow is an anti-affordance that says "not now".
+- **Object constancy:** elements fade and move rather than popping in and out, so you can follow what changed.
+- **Easing:** ease-out for things arriving and ease-in for things leaving, with short durations (`ArcDurationFast`, `ArcDurationMedium`). Animations must be interruptible.
+
 ## Tokens
 
 | Group | Tokens | Notes |
