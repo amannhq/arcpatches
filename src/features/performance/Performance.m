@@ -6,6 +6,7 @@
 #import "Browser.h"
 #import "../../browsers/ardia/Browser.h"
 #import <objc/runtime.h>
+#include <ctype.h>
 
 NSString *const TweakKeyDisableOnDeviceAI = @"arcpatches.disableOnDeviceAI";
 NSString *const TweakKeyNoBackgroundNetworking = @"arcpatches.noBackgroundNetworking";
@@ -31,19 +32,34 @@ static const char *blockSignature(id block) {
     return b->desc->rest[(b->flags & HasCopyDispose) ? 2 : 0];
 }
 
-// Answers a skipped initialize:callback: with "nothing"/failure (nil, NO, 0) so whoever
-// awaits it moves on. Only for void blocks whose arguments are all objects, blocks, BOOLs
-// or integers (all passed as one zeroed register); otherwise NO and the caller lets Dia start
-// the service.
+// Answers a skipped initialize:callback: with failure so whoever awaits it moves on:
+// an NSError argument gets a real error, other named objects nil, a BOOL NO. Only for
+// void blocks whose signature names every argument that way (nil for an unnamed object
+// or 0 for an integer could read as success); otherwise NO and Dia starts the service.
 static BOOL answerWithFailure(id callback) {
-    const char *sig = blockSignature(callback);
-    NSMethodSignature *ms = nil;
-    @try { ms = sig ? [NSMethodSignature signatureWithObjCTypes:sig] : nil; } @catch (__unused NSException *e) {}
-    if (!ms || ms.methodReturnType[0] != 'v' || ms.numberOfArguments > 5) return NO;
-    for (NSUInteger i = 1; i < ms.numberOfArguments; i++)   // 0 is the block itself
-        if (!strchr("@#BcCsSiIlLqQ", [ms getArgumentTypeAtIndex:i][0])) return NO;
+    const char *p = blockSignature(callback);
+    if (!p || *p++ != 'v') return NO;
+    while (isdigit(*p)) p++;
+    if (strncmp(p, "@?", 2)) return NO;   // the block itself
+    for (p += 2; isdigit(*p); p++);
+    NSError *err = [NSError errorWithDomain:@"dev.amannhq.arcpatches" code:1
+                                   userInfo:@{NSLocalizedDescriptionKey: @"On-device AI is turned off by ArcPatches"}];
+    struct { long v[4]; } args = {{0}};   // a struct, so the block below can capture it
+    int n = 0;
+    while (*p) {
+        if (n == 4) return NO;
+        if (!strncmp(p, "@\"NSError\"", 10)) { args.v[n] = (long)(__bridge void *)err; p += 10; }
+        else if (p[0] == '@' && p[1] == '"') { const char *q = strchr(p + 2, '"'); if (!q) return NO; p = q + 1; }
+        else if (*p == 'B' || *p == 'c') p++;
+        else return NO;
+        n++;
+        while (isdigit(*p)) p++;
+    }
     void (*invoke)(id, long, long, long, long) = ((struct TweakBlockLayout *)(__bridge void *)callback)->invoke;
-    dispatch_async(dispatch_get_main_queue(), ^{ invoke(callback, 0, 0, 0, 0); });   // extra zeroed registers are ignored
+    dispatch_async(dispatch_get_main_queue(), ^{   // captures err and callback; unused registers are ignored
+        (void)err;
+        invoke(callback, args.v[0], args.v[1], args.v[2], args.v[3]);
+    });
     return YES;
 }
 
