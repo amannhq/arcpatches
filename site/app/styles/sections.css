@@ -196,7 +196,8 @@ main > .section:last-child {
   padding: 0;
   overflow: hidden;
   font-family: var(--font-geist-mono), ui-monospace, monospace;
-  font-size: calc(100cqw / var(--cols) / 0.6);
+  /* On a phone the drawing is cropped on the right rather than shrunk past reading. */
+  font-size: max(7px, calc(100cqw / var(--cols) / 0.6));
   line-height: 1.18;
   color: var(--paper);
   white-space: pre;
