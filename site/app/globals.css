@@ -1,0 +1,14 @@
+@import "tailwindcss";
+@import "./styles/base.css";
+@import "./styles/art.css";
+@import "./styles/layout.css";
+@import "./styles/kit.css";
+@import "./styles/sections.css";
+@import "./styles/tables.css";
+@import "./styles/settings.css";
+@import "./styles/footer.css";
+
+/* ArcPatches site. The SPEC-01 hardware skin (components/ui/hardware) styles the kit's
+   components; the rules below set the print palette, the glass panels over the
+   procedural art, and re-tone the kit's light-panel parts for a dark page. The kit
+   lifts its own rules with :not(#_), so overrides here use more of them. */
