@@ -16,7 +16,16 @@ static void dumpView(NSView *v, NSMutableString *out, int depth) {
         f.origin.x, f.origin.y, f.size.width, f.size.height,
         v.hidden ? @" hidden" : @"", v.alphaValue < 1 ? [NSString stringWithFormat:@" alpha=%.2f", v.alphaValue] : @"",
         v.trackingAreas.count ? [NSString stringWithFormat:@" tracking=%lu", (unsigned long)v.trackingAreas.count] : @"",
-        [v isKindOfClass:NSTextField.class] ? [NSString stringWithFormat:@" \"%@\"", [(NSTextField *)v stringValue]] : @""];
+        [v isKindOfClass:NSTextField.class] ? [NSString stringWithFormat:@" \"%@\"", [(NSTextField *)v stringValue]]
+            : [v isKindOfClass:NSTextView.class] ? [NSString stringWithFormat:@" text=\"%@\"", [[(NSTextView *)v string] substringToIndex:MIN((NSUInteger)200, [(NSTextView *)v string].length)]] : @""];
+    // Where a page's live URL might be kept: probe a few likely keys, read-only.
+    for (NSString *k in @[@"url", @"URL", @"webContentURL", @"currentURL", @"displayURL"]) {
+        @try {
+            if (![v respondsToSelector:NSSelectorFromString(k)]) continue;
+            id val = [v valueForKey:k];
+            if (val) [out appendFormat:@"%*s  %@=%@\n", depth * 2, "", k, val];
+        } @catch (__unused NSException *e) {}
+    }
     if ([v respondsToSelector:@selector(hovering)]) {
         NSPoint p = [v convertPoint:v.window.mouseLocationOutsideOfEventStream fromView:nil];
         [out appendFormat:@"%*s  hovering=%d pointer=%@\n", depth * 2, "", ((BOOL (*)(id, SEL))objc_msgSend)(v, @selector(hovering)), NSStringFromPoint(p)];
