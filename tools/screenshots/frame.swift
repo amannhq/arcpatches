@@ -1,7 +1,7 @@
-// Dev tool: places rendered views on a styled background for the README.
+// Dev tool: places shots.m's renders on a styled backdrop for the README.
 //   swift tools/screenshots/frame.swift <raw-dir> <out-dir>
-// Reads commandbar.png, settings.png, companion.png (2x); writes
-// <out-dir>/commandbar.png and <out-dir>/apps.png (2x).
+// Reads the 2x renders in <raw-dir>; writes hero, sidebar, pill-hover, site-controls,
+// palette and editor PNGs (2x) to <out-dir>.
 import AppKit
 
 let raw = URL(fileURLWithPath: CommandLine.arguments[1]), out = URL(fileURLWithPath: CommandLine.arguments[2])
@@ -16,68 +16,60 @@ func load(_ name: String) -> NSImage {
     return img
 }
 
-/// Fine monochrome grain, tiled over the backdrop.
-let grain: NSImage = {
-    let n = 256
-    let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: n, pixelsHigh: n, bitsPerSample: 8, samplesPerPixel: 2,
-                               hasAlpha: true, isPlanar: false, colorSpaceName: .calibratedWhite, bytesPerRow: 0, bitsPerPixel: 0)!
-    var rng = SystemRandomNumberGenerator()
-    let p = rep.bitmapData!
-    for i in 0..<(n * n) {
-        p[i * 2] = UInt8.random(in: 0...255, using: &rng)       // grey level
-        p[i * 2 + 1] = UInt8.random(in: 10...26, using: &rng)   // low, varying opacity
-    }
-    let img = NSImage(size: NSSize(width: n / 2, height: n / 2))  // 2 px per point: grain stays fine at 2x
-    img.addRepresentation(rep)
-    return img
-}()
+var currentRep: NSBitmapImageRep!
 
-/// Dia-coloured backdrop: warm near-black with yellow and amber glows, plus grain.
+/// Warm near-black with soft amber glows, computed per pixel into the bitmap. Core
+/// Graphics dithers its gradients, and that noise made every PNG several times larger.
 func drawBackground(_ r: NSRect) {
-    NSGradient(colors: [rgb(0.08, 0.08, 0.08), rgb(0.10, 0.09, 0.08), rgb(0.06, 0.06, 0.06)], atLocations: [0, 0.5, 1], colorSpace: .sRGB)!
-        .draw(in: r, angle: -35)
-    // Glows are added like light (plus-lighter), so yellow stays yellow on black instead of turning olive.
-    NSGraphicsContext.current?.compositingOperation = .plusLighter
-    func glow(_ c: NSColor, _ x: CGFloat, _ y: CGFloat, _ radius: CGFloat, _ strength: CGFloat) {
-        let p = NSPoint(x: r.minX + x * r.width, y: r.minY + y * r.height)
-        NSGradient(colors: [c.withAlphaComponent(strength), c.withAlphaComponent(strength * 0.35), c.withAlphaComponent(0)],
-                   atLocations: [0, 0.45, 1], colorSpace: .sRGB)!
-            .draw(fromCenter: p, radius: 0, toCenter: p, radius: radius * max(r.width, r.height), options: [])
+    NSGraphicsContext.current?.flushGraphics()
+    let rep = currentRep!, w = rep.pixelsWide, h = rep.pixelsHigh, bpr = rep.bytesPerRow, data = rep.bitmapData!
+    let span = CGFloat(max(w, h))
+    // (colour, centre x, centre y from the bottom, radius, strength), added like light.
+    let glows: [([CGFloat], CGFloat, CGFloat, CGFloat, CGFloat)] = [
+        ([1.00, 0.70, 0.02], 0.12, 1.04, 0.45, 0.85),   // yellow, rising at the top left
+        ([1.00, 0.45, 0.05], 0.98, -0.04, 0.45, 0.65),  // amber, bottom right
+    ]
+    func falloff(_ d: CGFloat) -> CGFloat {   // 1 at the centre, 0.35 at 45%, 0 at the edge
+        d >= 1 ? 0 : d < 0.45 ? 1 - 0.65 * d / 0.45 : 0.35 * (1 - (d - 0.45) / 0.55)
     }
-    glow(rgb(1.00, 0.70, 0.02), 0.16, 1.02, 0.42, 0.95)   // Dia yellow, rising at the top left
-    glow(rgb(1.00, 0.45, 0.05), 0.98, -0.02, 0.42, 0.75)  // amber, bottom right
-    glow(rgb(1.00, 0.78, 0.20), 0.85, 1.05, 0.22, 0.35)   // pale sun, top right
-    NSGraphicsContext.current?.compositingOperation = .sourceOver
-    NSColor(patternImage: grain).setFill()
-    NSGraphicsContext.current?.patternPhase = .zero
-    r.fill(using: .sourceOver)
+    for j in 0..<h {
+        let y = 1 - CGFloat(j) / CGFloat(h)
+        for i in 0..<w {
+            let x = CGFloat(i) / CGFloat(w)
+            let t = min(1, max(0, (x + (1 - y)) / 2))   // top left to bottom right
+            let base: CGFloat = t < 0.5 ? 0.08 + 0.04 * t : 0.10 - 0.08 * (t - 0.5)
+            var c = [base, base * 0.95, base * 0.85]
+            for g in glows {
+                let dx = (x - g.1) * CGFloat(w), dy = (y - g.2) * CGFloat(h)
+                let k = falloff((dx * dx + dy * dy).squareRoot() / (g.3 * span)) * g.4
+                for n in 0..<3 { c[n] += g.0[n] * k }
+            }
+            let p = data + j * bpr + i * 4
+            for n in 0..<3 { p[n] = UInt8(min(255, (c[n] * 255).rounded())) }
+            p[3] = 255
+        }
+    }
 }
 
-/// A floating card (or a window, with a title bar and traffic lights) with a soft shadow.
-func drawCard(_ img: NSImage, at origin: NSPoint, titleBar: String?) -> NSRect {
-    let bar: CGFloat = titleBar == nil ? 0 : 30
-    let frame = NSRect(x: origin.x, y: origin.y, width: img.size.width, height: img.size.height + bar)
-    let radius: CGFloat = titleBar == nil ? 16 : 12
+/// A render with a soft shadow; its own corners are already drawn by shots.m.
+@discardableResult
+func drawCard(_ img: NSImage, at origin: NSPoint, radius: CGFloat = 14) -> NSRect {
+    let frame = NSRect(origin: origin, size: img.size)
     let shape = NSBezierPath(roundedRect: frame, xRadius: radius, yRadius: radius)
     NSGraphicsContext.saveGraphicsState()
-    let sh = NSShadow(); sh.shadowColor = rgb(0, 0, 0, 0.55); sh.shadowBlurRadius = 48; sh.shadowOffset = NSSize(width: 0, height: -22); sh.set()
+    let sh = NSShadow(); sh.shadowColor = rgb(0, 0, 0, 0.55); sh.shadowBlurRadius = 40; sh.shadowOffset = NSSize(width: 0, height: -18); sh.set()
     rgb(0.12, 0.12, 0.13).setFill(); shape.fill()
     NSGraphicsContext.restoreGraphicsState()
     NSGraphicsContext.saveGraphicsState(); shape.addClip()
-    img.draw(in: NSRect(x: frame.minX, y: frame.minY, width: img.size.width, height: img.size.height))
-    if let title = titleBar {
-        let barRect = NSRect(x: frame.minX, y: frame.maxY - bar, width: frame.width, height: bar)
-        rgb(0.12, 0.12, 0.13).setFill(); barRect.fill()
-        for (i, c) in [rgb(1.0, 0.37, 0.34), rgb(1.0, 0.74, 0.18), rgb(0.16, 0.79, 0.25)].enumerated() {
-            c.setFill(); NSBezierPath(ovalIn: NSRect(x: barRect.minX + 14 + CGFloat(i) * 20, y: barRect.midY - 6, width: 12, height: 12)).fill()
-        }
-        let a: [NSAttributedString.Key: Any] = [.font: NSFont.systemFont(ofSize: 13, weight: .semibold), .foregroundColor: rgb(1, 1, 1, 0.72)]
-        let s = (title as NSString).size(withAttributes: a)
-        (title as NSString).draw(at: NSPoint(x: barRect.midX - s.width / 2, y: barRect.midY - s.height / 2), withAttributes: a)
-    }
+    img.draw(in: frame)
     NSGraphicsContext.restoreGraphicsState()
     rgb(1, 1, 1, 0.10).setStroke(); shape.lineWidth = 1; shape.stroke()
     return frame
+}
+
+func caption(_ text: String, at p: NSPoint) {
+    let a: [NSAttributedString.Key: Any] = [.font: NSFont.systemFont(ofSize: 12, weight: .semibold), .foregroundColor: rgb(1, 1, 1, 0.58)]
+    (text as NSString).draw(at: p, withAttributes: a)
 }
 
 func render(size: NSSize, to name: String, _ draw: (NSRect) -> Void) {
@@ -85,6 +77,7 @@ func render(size: NSSize, to name: String, _ draw: (NSRect) -> Void) {
                                samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .calibratedRGB, bytesPerRow: 0, bitsPerPixel: 0)!
     rep.size = size
     NSGraphicsContext.saveGraphicsState()
+    currentRep = rep
     NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
     draw(NSRect(origin: .zero, size: size))
     NSGraphicsContext.restoreGraphicsState()
@@ -92,22 +85,50 @@ func render(size: NSSize, to name: String, _ draw: (NSRect) -> Void) {
     print("wrote", out.appendingPathComponent(name).path)
 }
 
-// 1. Command bar, floating.
-let bar = load("commandbar.png")
-let barCanvas = NSSize(width: bar.size.width + 200, height: bar.size.height + 190)
-render(size: barCanvas, to: "commandbar.png") { r in
-    drawBackground(r)
-    _ = drawCard(bar, at: NSPoint(x: (r.width - bar.size.width) / 2, y: (r.height - bar.size.height) / 2 + 8), titleBar: nil)
+/// One render centred on the backdrop.
+func single(_ name: String, pad: CGFloat = 64, radius: CGFloat = 14) {
+    let img = load(name)
+    render(size: NSSize(width: img.size.width + pad * 2, height: img.size.height + pad * 2), to: name) { r in
+        drawBackground(r)
+        drawCard(img, at: NSPoint(x: pad, y: pad + 6), radius: radius)
+    }
 }
 
-// 2. Settings pane and the ArcPatches app, side by side.
-let settings = load("settings.png"), app = load("companion.png")
-let gap: CGFloat = 56, pad: CGFloat = 80
-let appsCanvas = NSSize(width: pad * 2 + settings.size.width + gap + app.size.width,
-                        height: pad * 2 + max(settings.size.height, app.size.height) + 30)
-render(size: appsCanvas, to: "apps.png") { r in
+// 1. Hero: the sidebar, with the ⌘T palette beside it at the height Arc puts it.
+let sidebar = load("sidebar.png"), palette = load("palette.png")
+let gap: CGFloat = 44, pad: CGFloat = 56
+let heroSize = NSSize(width: pad * 2 + sidebar.size.width + gap + palette.size.width, height: pad * 2 + sidebar.size.height)
+render(size: heroSize, to: "hero.png") { r in
     drawBackground(r)
-    let top = r.maxY - pad
-    _ = drawCard(settings, at: NSPoint(x: pad, y: top - settings.size.height - 30 - 40), titleBar: "Settings — ArcPatches")
-    _ = drawCard(app, at: NSPoint(x: pad + settings.size.width + gap, y: top - app.size.height - 30), titleBar: "ArcPatches")
+    drawCard(sidebar, at: NSPoint(x: pad, y: pad), radius: 12)
+    let top = r.maxY - pad - sidebar.size.height * 0.18
+    drawCard(palette, at: NSPoint(x: pad + sidebar.size.width + gap, y: top - palette.size.height))
+}
+
+// 2. Single renders.
+single("sidebar.png", radius: 12)
+single("site-controls.png")
+single("palette.png")
+single("editor.png")
+
+// 3. The URL pill at rest, under the pointer, and with no page open.
+let states = [("At rest", load("pill-rest.png")), ("Hover: copy link and site controls", load("pill-hover.png")),
+              ("No page open", load("pill-empty.png"))]
+let pillW = states[0].1.size.width, rowH = states[0].1.size.height + 24
+let panel = NSSize(width: pillW, height: rowH * CGFloat(states.count) + 12)
+render(size: NSSize(width: panel.width + 128, height: panel.height + 128), to: "pill-hover.png") { r in
+    drawBackground(r)
+    let frame = NSRect(x: 64, y: 64, width: panel.width, height: panel.height)
+    let shape = NSBezierPath(roundedRect: frame, xRadius: 12, yRadius: 12)
+    NSGraphicsContext.saveGraphicsState()
+    let sh = NSShadow(); sh.shadowColor = rgb(0, 0, 0, 0.55); sh.shadowBlurRadius = 40; sh.shadowOffset = NSSize(width: 0, height: -18); sh.set()
+    rgb(0.135, 0.135, 0.145).setFill(); shape.fill()
+    NSGraphicsContext.restoreGraphicsState()
+    rgb(1, 1, 1, 0.10).setStroke(); shape.lineWidth = 1; shape.stroke()
+    var y = frame.maxY - 6
+    for (label, img) in states {
+        y -= rowH
+        caption(label, at: NSPoint(x: frame.minX + 12, y: y + img.size.height + 4))
+        img.draw(in: NSRect(x: frame.minX, y: y, width: img.size.width, height: img.size.height))
+    }
 }

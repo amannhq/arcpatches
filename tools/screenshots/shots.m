@@ -1,29 +1,78 @@
-// Dev tool: renders README screenshots of the command bar and the Settings pane
-// from the real view code, with generic demo content (no personal data, no
-// third-party logos). Output: <dir>/commandbar.png, <dir>/settings.png (2x).
+// Dev tool: renders README screenshots of ArcPatches' own UI from the real view code,
+// offscreen, in dark mode at 2x, with generic demo content (no personal data, no
+// third-party logos, no browser running). The site-controls data source is replaced
+// by demo data (shots-data.m), so nothing is read from a browser profile.
 //
-//   clang -fobjc-arc -framework AppKit -framework QuartzCore -lsqlite3 -Isrc/core -Isrc/browsers/dia \
-//     tools/screenshots/shots.m $(find src -name '*.m' ! -name ArcPatches.m) -o build/shots && build/shots build/shots-out
-#import <AppKit/AppKit.h>
-#import "../../src/features/commandbar/CommandSources.h"
+//   mkdir -p build && clang -fobjc-arc -framework AppKit -framework QuartzCore -lsqlite3 -Isrc/core -Isrc/browsers/dia \
+//     tools/screenshots/shots*.m $(find src -name '*.m' ! -name ArcPatches.m ! -name SiteControlsData.m) \
+//     -o build/shots && build/shots build/shots-raw
+//   swift tools/screenshots/frame.swift build/shots-raw docs/screenshots
+//
+// Raw output: palette.png, editor.png, settings.png, plus shots-sidebar.m's renders.
+#import "shots.h"
+#import "../../src/features/commandbar/CommandBarInternal.h"
 
-static NSImage *letterIcon(NSString *letter, NSColor *color) {
-    return [NSImage imageWithSize:NSMakeSize(20, 20) flipped:NO drawingHandler:^BOOL(NSRect r) {
-        [color setFill];
-        [[NSBezierPath bezierPathWithRoundedRect:r xRadius:5 yRadius:5] fill];
-        NSDictionary *a = @{NSFontAttributeName: [NSFont systemFontOfSize:12 weight:NSFontWeightBold], NSForegroundColorAttributeName: NSColor.whiteColor};
+static NSColor *rgb(CGFloat r, CGFloat g, CGFloat b) { return [NSColor colorWithSRGBRed:r green:g blue:b alpha:1]; }
+
+NSImage *ShotLetterIcon(NSString *letter, NSInteger color, CGFloat size) {
+    NSArray<NSColor *> *colors = @[rgb(0.36, 0.47, 0.98), rgb(0.95, 0.55, 0.25), rgb(0.20, 0.70, 0.55), rgb(0.85, 0.33, 0.45),
+                                   rgb(0.58, 0.42, 0.90), rgb(0.25, 0.62, 0.90), rgb(0.90, 0.72, 0.20), rgb(0.45, 0.50, 0.58)];
+    NSColor *fill = colors[color % colors.count];
+    return [NSImage imageWithSize:NSMakeSize(size, size) flipped:NO drawingHandler:^BOOL(NSRect r) {
+        [fill setFill];
+        [[NSBezierPath bezierPathWithRoundedRect:r xRadius:size / 4 yRadius:size / 4] fill];
+        NSDictionary *a = @{NSFontAttributeName: [NSFont systemFontOfSize:size * 0.6 weight:NSFontWeightBold],
+                            NSForegroundColorAttributeName: NSColor.whiteColor};
         NSSize s = [letter sizeWithAttributes:a];
         [letter drawAtPoint:NSMakePoint(NSMidX(r) - s.width / 2, NSMidY(r) - s.height / 2) withAttributes:a];
         return YES;
     }];
 }
 
-@interface DemoDelegate : NSObject
-@property (nonatomic, strong) NSDictionary<NSString *, NSImage *> *icons;
+void ShotWritePNG(NSView *v, NSString *path) {
+    [v layoutSubtreeIfNeeded];
+    NSBitmapImageRep *rep = [[NSBitmapImageRep alloc] initWithBitmapDataPlanes:NULL
+        pixelsWide:(NSInteger)NSWidth(v.bounds) * 2 pixelsHigh:(NSInteger)NSHeight(v.bounds) * 2 bitsPerSample:8 samplesPerPixel:4
+        hasAlpha:YES isPlanar:NO colorSpaceName:NSCalibratedRGBColorSpace bytesPerRow:0 bitsPerPixel:0];
+    rep.size = v.bounds.size;
+    [v cacheDisplayInRect:v.bounds toBitmapImageRep:rep];
+    [[rep representationUsingType:NSBitmapImageFileTypePNG properties:@{}] writeToFile:path atomically:YES];
+}
+
+@interface ShotCardView : NSView
+@property (nonatomic, strong) NSColor *fill;
+@property (nonatomic) CGFloat radius;
+@property (nonatomic) BOOL border;
+@end
+@implementation ShotCardView
+- (BOOL)isFlipped { return YES; }
+- (void)drawRect:(NSRect)r {
+    NSBezierPath *p = [NSBezierPath bezierPathWithRoundedRect:NSInsetRect(self.bounds, 0.5, 0.5) xRadius:self.radius yRadius:self.radius];
+    [self.fill setFill]; [p fill];
+    if (!self.border) return;
+    [ArcPanelBorder() setStroke]; p.lineWidth = 1; [p stroke];
+}
+@end
+
+NSView *ShotCard(NSSize size, NSColor *fill, CGFloat radius, BOOL border) {
+    ShotCardView *v = [[ShotCardView alloc] initWithFrame:NSMakeRect(0, 0, size.width, size.height)];
+    v.fill = fill; v.radius = radius; v.border = border;
+    v.appearance = [NSAppearance appearanceNamed:NSAppearanceNameDarkAqua];
+    return v;
+}
+
+#pragma mark - Command bar (⌘T palette, ⌘L editor)
+
+@interface DemoDelegate : NSObject <TweakResultsViewDelegate>
 @end
 @implementation DemoDelegate
-- (NSImage *)iconForItem:(TweakItem *)item { return item.url ? self.icons[item.url] : nil; }
-- (void)resultsView:(id)v activate:(NSInteger)row {}
+- (NSImage *)iconForItem:(TweakItem *)item {
+    if ([item.url containsString:@"docs.example.dev"]) return ShotLetterIcon(@"D", 2, ArcFaviconSize);
+    if ([item.url containsString:@"mail.example.com"]) return ShotLetterIcon(@"I", 0, ArcFaviconSize);
+    if ([item.url containsString:@"example.com"]) return ShotLetterIcon(@"E", 1, ArcFaviconSize);
+    return nil;
+}
+- (void)resultsView:(TweakResultsView *)v activate:(NSInteger)row {}
 @end
 
 static TweakItem *item(TweakItemKind kind, NSString *title, NSString *detail, NSString *url, NSString *symbol) {
@@ -32,92 +81,86 @@ static TweakItem *item(TweakItemKind kind, NSString *title, NSString *detail, NS
     return i;
 }
 
-@interface BarBackground : NSView
-@end
-@implementation BarBackground
-- (BOOL)isFlipped { return YES; }
-- (void)drawRect:(NSRect)r {
-    NSBezierPath *p = [NSBezierPath bezierPathWithRoundedRect:NSInsetRect(self.bounds, 0.5, 0.5) xRadius:16 yRadius:16];
-    [[NSColor colorWithSRGBRed:0.12 green:0.12 blue:0.13 alpha:0.97] setFill]; [p fill];
-    [[NSColor colorWithWhite:1 alpha:0.12] setStroke]; p.lineWidth = 1; [p stroke];
-}
-@end
+// The command bar's panel, laid out as CommandBarLayout.m's -layoutForRows: does.
+// `typed` is what was typed; `selected` follows it, shown with the field's selection colour.
+static NSView *commandBar(BOOL editor, CGFloat width, NSString *typed, NSString *selected, NSImage *icon, NSArray *items) {
+    static DemoDelegate *del;
+    del = [DemoDelegate new];
+    TweakBarMetrics m = TweakBarMetricsFor(editor);
+    NSUInteger n = items.count;
+    CGFloat listH = n ? 2 * m.listInset + n * m.rowHeight + (n - 1) * m.rowGap : 0;
+    CGFloat line = n && !editor ? 0.5 : 0;   // a hairline at 2x
+    CGFloat height = m.inputHeight + line + listH, mid = m.inputHeight / 2;   // flipped: the field row on top
+    NSView *panel = ShotCard(NSMakeSize(width, height), [NSColor colorWithSRGBRed:0.11 green:0.11 blue:0.115 alpha:1], ArcRadiusPopover, YES);
 
-static void writePNG(NSView *v, NSString *path) {
-    NSBitmapImageRep *rep = [v bitmapImageRepForCachingDisplayInRect:v.bounds];
-    // Render at 2x for crisp README images.
-    rep = [[NSBitmapImageRep alloc] initWithBitmapDataPlanes:NULL pixelsWide:(NSInteger)NSWidth(v.bounds) * 2 pixelsHigh:(NSInteger)NSHeight(v.bounds) * 2
-                                               bitsPerSample:8 samplesPerPixel:4 hasAlpha:YES isPlanar:NO colorSpaceName:NSCalibratedRGBColorSpace bytesPerRow:0 bitsPerPixel:0];
-    rep.size = v.bounds.size;
-    [v cacheDisplayInRect:v.bounds toBitmapImageRep:rep];
-    [[rep representationUsingType:NSBitmapImageFileTypePNG properties:@{}] writeToFile:path atomically:YES];
+    CGFloat iconX = editor ? ArcSpace3 : ArcPaletteSearchInset;
+    NSImageView *fieldIcon = [NSImageView imageViewWithImage:icon ?: ArcSymbol(@"magnifyingglass", ArcPaletteSearchIcon, NSFontWeightRegular, nil)];
+    fieldIcon.imageScaling = NSImageScaleProportionallyDown;
+    fieldIcon.contentTintColor = ArcIconColor(YES);
+    fieldIcon.frame = NSMakeRect(iconX, round(mid - ArcFaviconSize / 2), ArcFaviconSize, ArcFaviconSize);
+    [panel addSubview:fieldIcon];
+
+    NSFont *font = editor ? ArcFontURL() : ArcFontPaletteField();
+    CGFloat fieldH = ceil(font.ascender - font.descender + font.leading) + ArcSpace1 / 2;
+    CGFloat fieldX = NSMaxX(fieldIcon.frame) + (editor ? ArcSpace2 : ArcSpace3);
+    NSMutableAttributedString *text = [[NSMutableAttributedString alloc] initWithString:typed
+        attributes:@{NSFontAttributeName: font, NSForegroundColorAttributeName: NSColor.labelColor}];
+    [text appendAttributedString:[[NSAttributedString alloc] initWithString:selected ?: @"" attributes:@{
+        NSFontAttributeName: font, NSForegroundColorAttributeName: NSColor.labelColor, NSBackgroundColorAttributeName: ArcTextSelection()}]];
+    NSTextField *field = [NSTextField labelWithAttributedString:text];
+    field.frame = NSMakeRect(fieldX, round(mid - fieldH / 2), width - fieldX - iconX, fieldH);
+    [panel addSubview:field];
+
+    if (line) {
+        NSBox *divider = [[NSBox alloc] initWithFrame:NSMakeRect(0, m.inputHeight, width, line)];
+        divider.boxType = NSBoxCustom; divider.borderWidth = 0; divider.fillColor = ArcHairline();
+        [panel addSubview:divider];
+    }
+    TweakResultsView *results = [[TweakResultsView alloc] initWithFrame:NSMakeRect(0, m.inputHeight + line, width, listH)];
+    results.metrics = m;
+    results.delegate = del;
+    results.items = items;   // the first row is highlighted, as when the bar opens
+    [panel addSubview:results];
+    return panel;
 }
 
-static void commandBar(NSString *dir) {
+static void palette(NSString *dir) {
     NSArray *items = @[
-        item(TweakItemCommand, @"Settings", @"⌘,", nil, @"gearshape"),
-        item(TweakItemSearch, @"set", @"Search Google", @"https://www.google.com/search?q=set", @"magnifyingglass"),
-        item(TweakItemTab, @"Settings · Project board", @"Switch to Tab", @"https://board.example.com/settings", @"square.on.square"),
-        item(TweakItemHistory, @"Account settings", nil, @"https://example.com/account/settings", @"globe"),
-        item(TweakItemPage, @"Site Settings", nil, @"chrome://settings/content", @"slider.horizontal.3"),
-        item(TweakItemHistory, @"Settings reference", nil, @"https://docs.example.org/reference/settings", @"globe"),
+        item(TweakItemTab, @"Getting started", @"Switch to Tab", @"https://docs.example.dev/start", @"square.on.square"),
+        item(TweakItemHistory, @"API reference", nil, @"https://docs.example.dev/reference/api", @"globe"),
+        item(TweakItemSearch, @"doc", @"Search Google", nil, @"magnifyingglass"),
+        item(TweakItemCommand, @"Duplicate Tab", @"⇧⌘D", nil, @"plus.square.on.square"),
+        item(TweakItemPage, @"Downloads", nil, @"chrome://downloads", @"arrow.down.circle"),
+        item(TweakItemHistory, @"Document settings", nil, @"https://example.com/account/documents", @"globe"),
     ];
-    DemoDelegate *del = [DemoDelegate new];
-    del.icons = @{
-        @"https://board.example.com/settings": letterIcon(@"P", [NSColor colorWithSRGBRed:0.36 green:0.47 blue:0.98 alpha:1]),
-        @"https://example.com/account/settings": letterIcon(@"E", [NSColor colorWithSRGBRed:0.95 green:0.55 blue:0.25 alpha:1]),
-        @"https://docs.example.org/reference/settings": letterIcon(@"D", [NSColor colorWithSRGBRed:0.20 green:0.70 blue:0.55 alpha:1]),
-    };
-
-    CGFloat width = 760, input = 64, rows = items.count * 44 + 16;
-    BarBackground *bar = [[BarBackground alloc] initWithFrame:NSMakeRect(0, 0, width, input + 1 + rows)];
-    bar.appearance = [NSAppearance appearanceNamed:NSAppearanceNameDarkAqua];
-
-    NSImageView *icon = [NSImageView imageViewWithImage:[NSImage imageWithSystemSymbolName:@"gearshape" accessibilityDescription:nil]];
-    icon.symbolConfiguration = [NSImageSymbolConfiguration configurationWithPointSize:18 weight:NSFontWeightRegular];
-    icon.contentTintColor = NSColor.secondaryLabelColor;
-    icon.frame = NSMakeRect(22, input / 2 - 12, 24, 24);
-    [bar addSubview:icon];
-
-    NSTextField *field = [NSTextField labelWithString:@""];
-    NSMutableAttributedString *text = [[NSMutableAttributedString alloc] initWithString:@"set"
-        attributes:@{NSFontAttributeName: [NSFont systemFontOfSize:22 weight:NSFontWeightMedium], NSForegroundColorAttributeName: NSColor.labelColor}];
-    field.attributedStringValue = text;
-    field.frame = NSMakeRect(58, input / 2 - 14, 200, 30);
-    [bar addSubview:field];
-    NSBox *caret = [[NSBox alloc] initWithFrame:NSMakeRect(58 + [text size].width + 2, input / 2 - 12, 2, 26)];
-    caret.boxType = NSBoxCustom; caret.borderWidth = 0; caret.fillColor = NSColor.controlAccentColor;
-    [bar addSubview:caret];
-
-    NSBox *divider = [[NSBox alloc] initWithFrame:NSMakeRect(0, input, width, 1)];
-    divider.boxType = NSBoxSeparator;
-    [bar addSubview:divider];
-
-    NSView *results = [[NSClassFromString(@"TweakResultsView") alloc] initWithFrame:NSMakeRect(0, input + 1, width, rows)];
-    [results setValue:del forKey:@"delegate"];
-    [results setValue:items forKey:@"items"];
-    [bar addSubview:results];
-
-    writePNG(bar, [dir stringByAppendingPathComponent:@"commandbar.png"]);
+    NSView *bar = commandBar(NO, 640, @"doc", @"s.example.dev", nil, items);
+    ShotWritePNG(bar, [dir stringByAppendingPathComponent:@"palette.png"]);
 }
+
+static void editor(NSString *dir) {
+    NSArray *items = @[
+        item(TweakItemHistory, @"Getting started", nil, @"https://docs.example.dev/start", @"globe"),
+        item(TweakItemHistory, @"docs.example.dev", nil, @"https://docs.example.dev/", @"globe"),
+        item(TweakItemTab, @"API reference", @"Switch to Tab", @"https://docs.example.dev/reference/api", @"square.on.square"),
+        item(TweakItemHistory, @"Changelog", nil, @"https://docs.example.dev/changelog", @"globe"),
+        item(TweakItemHistory, @"Install guide", nil, @"https://docs.example.dev/install", @"globe"),
+    ];
+    CGFloat width = MIN(ArcEditorMaxWidth, MAX(ArcEditorMinWidth, 240 * ArcEditorWidthRatio));   // from a 240-pt sidebar
+    NSView *bar = commandBar(YES, width, @"", @"https://docs.example.dev/start", ShotLetterIcon(@"D", 2, ArcFaviconSize), items);
+    ShotWritePNG(bar, [dir stringByAppendingPathComponent:@"editor.png"]);
+}
+
+#pragma mark - Settings pane
 
 static void settings(NSString *dir) {
     NSView *pane = [[NSClassFromString(@"TweakPrefsPane") alloc] initWithFrame:NSMakeRect(0, 0, 600, 1080)];
-    pane.appearance = [NSAppearance appearanceNamed:NSAppearanceNameDarkAqua];
-    NSView *bg = [[NSView alloc] initWithFrame:pane.frame];
-    bg.wantsLayer = YES;
-    bg.layer.backgroundColor = [NSColor colorWithSRGBRed:0.12 green:0.12 blue:0.13 alpha:1].CGColor;
-    bg.appearance = pane.appearance;
-    [bg addSubview:pane];
-    [bg layoutSubtreeIfNeeded];
-    // Keep the first three groups (URL bar, Sidebar URL bar, Privacy): crop to the top.
-    NSView *crop = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 600, 708)];
-    crop.wantsLayer = YES;
-    crop.layer.backgroundColor = bg.layer.backgroundColor;
-    crop.appearance = pane.appearance;
-    bg.frame = NSMakeRect(0, 708 - 1080, 600, 1080);
-    [crop addSubview:bg];
-    writePNG(crop, [dir stringByAppendingPathComponent:@"settings.png"]);
+    NSView *crop = ShotCard(NSMakeSize(600, 708), [NSColor colorWithSRGBRed:0.12 green:0.12 blue:0.13 alpha:1], 0, NO);
+    pane.appearance = crop.appearance;
+    [crop addSubview:pane];
+    [pane layoutSubtreeIfNeeded];
+    // Keep the first groups: the crop is flipped, so the pane's top is at y = 0.
+    pane.frame = NSMakeRect(0, 0, 600, 1080);
+    ShotWritePNG(crop, [dir stringByAppendingPathComponent:@"settings.png"]);
 }
 
 int main(int argc, char **argv) {
@@ -126,10 +169,14 @@ int main(int argc, char **argv) {
         NSApp.appearance = [NSAppearance appearanceNamed:NSAppearanceNameDarkAqua];
         NSString *dir = argc > 1 ? @(argv[1]) : @".";
         [NSFileManager.defaultManager createDirectoryAtPath:dir withIntermediateDirectories:YES attributes:nil error:nil];
-        [NSAppearance setCurrentAppearance:NSApp.appearance];
-        commandBar(dir);
-        settings(dir);
-        printf("wrote %s/commandbar.png, settings.png\n", dir.UTF8String);
+        [NSApp.appearance performAsCurrentDrawingAppearance:^{
+            palette(dir);
+            editor(dir);
+            settings(dir);
+            ShotSidebar(dir);
+            ShotSiteControls(dir);
+        }];
+        printf("wrote renders to %s\n", dir.UTF8String);
     }
     return 0;
 }

@@ -9,7 +9,8 @@ Read `README.md` first. The layout is `src/core`, `src/browsers/<id>`, `src/feat
 ## Hard rules
 
 - Never launch, quit or modify `/Applications/Dia.app`, any other browser, or anything in `~/Applications`. Don't run `open` on an app. Reading binaries with `strings`, `otool` or `PlistBuddy -c Print` is fine.
-- Never run `./build.sh`. Never run `./installer/build.sh` without `--no-install`. Never run `tools/probe-*`, `tools/selftest*` or the screenshot tools, because all of them need a live browser.
+- Never run `./build.sh`. Never run `./installer/build.sh` without `--no-install`. Never run `tools/probe-*` or `tools/selftest*`, because they need a live browser.
+- `tools/screenshots/shots.m` and `frame.swift` are safe to build and run: they render ArcPatches' own views offscreen with demo data and need no browser (compile line in `shots.m`'s header; output goes to `docs/screenshots/`). Don't run `tools/screenshots/companion.swift`: it can write a demo health report into the real Application Support folder.
 - Verification means compiling, running `./tests/run.sh`, and static checks (`scripts/check-classes.sh`). List anything only a running browser can confirm as "needs live verification".
 - Browser class names live only in `src/browsers/<id>/Browser.m`. Use the `TweakHook`, `TweakFindClass` and `TweakSettings` helpers, and fail soft when a class is missing.
 - No new dependencies. Keep files under about 250 lines. Match the existing style.
