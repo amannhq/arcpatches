@@ -53,7 +53,7 @@
     _field.bezeled = NO;
     _field.drawsBackground = NO;
     _field.focusRingType = NSFocusRingTypeNone;
-    _field.placeholderString = @"Search or Enter URL...";
+    _field.placeholderString = @"Search or Enter URL…";
     _field.cell.scrollable = YES;
     _field.cell.wraps = NO;
     _field.delegate = self;

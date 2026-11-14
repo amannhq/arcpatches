@@ -69,15 +69,15 @@ NSArray<NSDictionary *> *TweakShortcutActions(void) {
     dispatch_once(&once, ^{
         NSEventModifierFlags co = NSEventModifierFlagControl | NSEventModifierFlagOption;
         actions = @[
-            @{@"id": @"sortTabs", @"title": @"Sort tabs by domain", @"detail": @"Orders this profile's tabs by site, then title. Pinned tabs and groups stay put.",
+            @{@"id": @"sortTabs", @"title": @"Sort Tabs by Domain", @"detail": @"Orders this profile's tabs by site, then title. Pinned tabs and groups stay put.",
               @"run": [NSValue valueWithPointer:sortTabs], @"default": shortcut(kVK_ANSI_S, co, @"s")},
-            @{@"id": @"groupTabs", @"title": @"Group tabs by domain", @"detail": @"Puts tabs from the same site (two or more) into a group named after it.",
+            @{@"id": @"groupTabs", @"title": @"Group Tabs by Domain", @"detail": @"Puts tabs from the same site (two or more) into a group named after it.",
               @"run": [NSValue valueWithPointer:groupTabs], @"default": shortcut(kVK_ANSI_G, co, @"g")},
-            @{@"id": @"nextProfile", @"title": @"Next profile",
+            @{@"id": @"nextProfile", @"title": @"Next Profile",
               @"run": [NSValue valueWithPointer:nextProfile], @"default": shortcut(kVK_RightArrow, co, @"→")},
-            @{@"id": @"previousProfile", @"title": @"Previous profile",
+            @{@"id": @"previousProfile", @"title": @"Previous Profile",
               @"run": [NSValue valueWithPointer:previousProfile], @"default": shortcut(kVK_LeftArrow, co, @"←")},
-            @{@"id": @"moveTabToNextProfile", @"title": @"Move tab to next profile", @"detail": @"Takes the current tab with you.",
+            @{@"id": @"moveTabToNextProfile", @"title": @"Move Tab to Next Profile", @"detail": @"Takes the current tab with you.",
               @"run": [NSValue valueWithPointer:moveTabToNextProfile], @"default": shortcut(kVK_RightArrow, co | NSEventModifierFlagShift, @"→")},
         ];
     });

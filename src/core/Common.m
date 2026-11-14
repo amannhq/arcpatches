@@ -244,27 +244,35 @@ TweakCommandBarStyle TweakCommandBarCurrentStyle(void) {
     return [NSUserDefaults.standardUserDefaults integerForKey:TweakKeyCommandBarStyle];
 }
 
-static NSMenuItem *menuItemForShortcut(NSMenu *menu, NSString *key, NSEventModifierFlags mods, NSMenu **owner) {
-    NSEventModifierFlags mask = NSEventModifierFlagCommand | NSEventModifierFlagOption | NSEventModifierFlagControl | NSEventModifierFlagShift;
+static NSMenuItem *findMenuItem(NSMenu *menu, BOOL (^match)(NSMenuItem *), NSMenu **owner) {
     for (NSMenuItem *i in menu.itemArray) {
         if (i.submenu) {
-            NSMenuItem *hit = menuItemForShortcut(i.submenu, key, mods, owner);
+            NSMenuItem *hit = findMenuItem(i.submenu, match, owner);
             if (hit) return hit;
             continue;
         }
-        if (![i.keyEquivalent isEqualToString:key] || (i.keyEquivalentModifierMask & mask) != mods) continue;
+        if (!match(i)) continue;
         *owner = menu;
         return i;
     }
     return nil;
 }
 
-BOOL TweakPerformMenuShortcut(NSString *key, NSEventModifierFlags mods) {
+static BOOL performMenuItem(BOOL (^match)(NSMenuItem *)) {
     NSMenu *owner = nil;
-    NSMenuItem *item = menuItemForShortcut(NSApp.mainMenu, key, mods, &owner);
+    NSMenuItem *item = findMenuItem(NSApp.mainMenu, match, &owner);
     if (!item || !owner) return NO;
     [owner update];   // validates the item, as opening the menu would
     if (!item.isEnabled) return NO;
     [owner performActionForItemAtIndex:[owner indexOfItem:item]];
     return YES;
+}
+
+BOOL TweakPerformMenuShortcut(NSString *key, NSEventModifierFlags mods) {
+    NSEventModifierFlags mask = NSEventModifierFlagCommand | NSEventModifierFlagOption | NSEventModifierFlagControl | NSEventModifierFlagShift;
+    return performMenuItem(^BOOL(NSMenuItem *i) { return [i.keyEquivalent isEqualToString:key] && (i.keyEquivalentModifierMask & mask) == mods; });
+}
+
+BOOL TweakPerformMenuTitle(NSString *title) {
+    return performMenuItem(^BOOL(NSMenuItem *i) { return !i.isHidden && [i.title isEqualToString:title]; });
 }

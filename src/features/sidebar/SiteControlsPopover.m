@@ -4,7 +4,9 @@
 #import "SiteControlsViews.h"
 #import "Browser.h"
 
-static const CGFloat kWidth = 270, kPad = 12, kGap = 8, kTileH = 44, kRowH = 44, kColumns = 4;
+static const CGFloat kWidth = ArcPopoverWidth, kPad = ArcSpace3, kGap = ArcSpace2, kTileH = ArcTileHeight, kRowH = ArcRowHeight;
+static const NSUInteger kColumns = 4;
+static const CGFloat kRowInset = (ArcRowHeight - ArcRowIconCircle) / 2;   // rows' circles line up with the tiles
 
 @interface TweakSiteControlsView : NSView
 @end
@@ -46,9 +48,9 @@ static NSMenuItem *screenshotItem(NSMenu *menu, int depth) {
 - (CGFloat)placeHeader:(NSString *)title atY:(CGFloat)y {
     NSTextField *h = TweakSiteSectionHeader(title);
     [h sizeToFit];
-    h.frame = NSMakeRect(kPad + 2, y, kWidth - kPad * 2, NSHeight(h.frame));
+    h.frame = NSMakeRect(kPad, y, kWidth - kPad * 2, NSHeight(h.frame));
     [self.view addSubview:h];
-    return y + NSHeight(h.frame) + 6;
+    return y + NSHeight(h.frame) + ArcSpace2;
 }
 
 - (CGFloat)placeGrid:(NSArray<NSView *> *)tiles columns:(NSUInteger)columns atY:(CGFloat)y {
@@ -72,11 +74,11 @@ static NSMenuItem *screenshotItem(NSMenu *menu, int depth) {
     if (self.screenshotItem)
         [actions addObject:[TweakSiteTile tileWithSymbol:@"camera" label:@"Screenshot" target:self action:@selector(screenshot:)]];
     [actions addObject:[TweakSiteTile tileWithSymbol:@"info.circle" label:@"Site Info" target:self action:@selector(siteInfo:)]];
-    CGFloat y = [self placeGrid:actions columns:actions.count atY:kPad] + 16;
+    CGFloat y = [self placeGrid:actions columns:actions.count atY:kPad] + ArcSpace4;
 
     y = [self placeHeader:@"Extensions" atY:y];
     NSMutableArray *tiles = [NSMutableArray array];
-    NSSize iconSize = NSMakeSize(20, 20);
+    NSSize iconSize = NSMakeSize(ArcFaviconSize, ArcFaviconSize);
     for (NSUInteger i = 0; i < self.extensions.count; i++) {
         TweakSiteExtension *e = self.extensions[i];
         NSImage *icon = [e.icon copy];
@@ -87,33 +89,33 @@ static NSMenuItem *screenshotItem(NSMenu *menu, int depth) {
         [tiles addObject:t];
     }
     [tiles addObject:[TweakSiteTile tileWithSymbol:@"plus" label:@"Add Extensions" target:self action:@selector(webStore:)]];
-    y = [self placeGrid:tiles columns:kColumns atY:y] + 16;
+    y = [self placeGrid:tiles columns:kColumns atY:y] + ArcSpace4;
 
     y = [self placeHeader:@"Settings" atY:y];
     NSMutableArray *rows = [NSMutableArray arrayWithObject:
-        [TweakSiteRow rowWithSymbol:@"slider.horizontal.3" title:@"Site settings" subtitle:c.host target:self action:@selector(siteSettings:)]];
+        [TweakSiteRow rowWithSymbol:@"slider.horizontal.3" title:@"Site Settings" subtitle:c.host target:self action:@selector(siteSettings:)]];
     for (NSDictionary *p in TweakSitePermissions(self.url))
         [rows addObject:[TweakSiteRow rowWithSymbol:p[@"symbol"] title:p[@"title"] subtitle:p[@"state"] target:self action:@selector(siteSettings:)]];
     for (NSView *r in rows) {
-        r.frame = NSMakeRect(kPad - 6, y, kWidth - (kPad - 6) * 2, kRowH);
+        r.frame = NSMakeRect(kPad - kRowInset, y, kWidth - (kPad - kRowInset) * 2, kRowH);
         [self.view addSubview:r];
         y += kRowH;
     }
 
-    y += 8;
+    y += ArcSpace2;
     NSBox *line = [[NSBox alloc] initWithFrame:NSMakeRect(kPad, y, kWidth - kPad * 2, 1)];
     line.boxType = NSBoxSeparator;
     [self.view addSubview:line];
-    y += 1 + 10;
+    y += 1 + ArcSpace2;
 
     NSView *badge = TweakSiteSecurityBadge([c.scheme.lowercaseString isEqualToString:@"https"]);
     badge.frameOrigin = NSMakePoint(kPad, y);
     [self.view addSubview:badge];
     TweakSiteTile *more = [TweakSiteTile tileWithSymbol:@"ellipsis" label:@"More" target:self action:@selector(more:)];
-    more.frame = NSMakeRect(kWidth - kPad - 26, y, 26, 26);
-    more.radius = 13;
+    more.frame = NSMakeRect(kWidth - kPad - ArcBadgeHeight, y, ArcBadgeHeight, ArcBadgeHeight);
+    more.radius = ArcBadgeHeight / 2;
     [self.view addSubview:more];
-    y += 26 + kPad;
+    y += ArcBadgeHeight + kPad;
 
     self.view.frameSize = NSMakeSize(kWidth, y);
     self.popover.contentSize = self.view.frame.size;

@@ -1,28 +1,82 @@
 #import "SiteControlsViews.h"
-#import "SidebarViews.h"
-
-static void trackHover(NSView *v) {
-    for (NSTrackingArea *t in v.trackingAreas) [v removeTrackingArea:t];
-    [v addTrackingArea:[[NSTrackingArea alloc] initWithRect:NSZeroRect
-        options:NSTrackingMouseEnteredAndExited | NSTrackingActiveAlways | NSTrackingInVisibleRect owner:v userInfo:nil]];
-}
+#import "ChromeButton.h"
+#import <QuartzCore/QuartzCore.h>
 
 static void setFill(NSView *v, NSColor *color) {
     [v.effectiveAppearance performAsCurrentDrawingAppearance:^{ v.layer.backgroundColor = color.CGColor; }];
 }
 
-#pragma mark - Tile
+#pragma mark - Button
 
-@interface TweakSiteTile ()
-@property (nonatomic) BOOL hovering;
+@interface TweakSiteButton ()
+@property (nonatomic, readwrite) BOOL hovering, pressed;
 @end
+
+@implementation TweakSiteButton
+
+- (instancetype)initWithFrame:(NSRect)frame {
+    if (!(self = [super initWithFrame:frame])) return nil;
+    self.bordered = NO;
+    self.title = @"";
+    self.refusesFirstResponder = YES;
+    self.focusRingType = NSFocusRingTypeNone;
+    [(NSButtonCell *)self.cell setHighlightsBy:NSNoCellMask];   // our pressed fill replaces AppKit's darkening
+    self.wantsLayer = YES;
+    ArcRound(self.layer, ArcRadiusMedium);
+    return self;
+}
+
+// Subclasses pick their fills.
+- (NSColor *)restFill { return NSColor.clearColor; }
+- (NSColor *)hoverFill { return ArcFillColor(ArcFillHover); }
+
+- (void)updateFill:(BOOL)animated {
+    NSColor *c = self.pressed ? ArcFillColor(ArcFillPressed) : self.hovering ? self.hoverFill : self.restFill;
+    TweakChromeSetFill(self, self.layer, c, animated);
+}
+
+- (void)updateTrackingAreas {
+    [super updateTrackingAreas];
+    for (NSTrackingArea *t in self.trackingAreas) [self removeTrackingArea:t];
+    [self addTrackingArea:[[NSTrackingArea alloc] initWithRect:NSZeroRect
+        options:NSTrackingMouseEnteredAndExited | NSTrackingActiveAlways | NSTrackingInVisibleRect owner:self userInfo:nil]];
+}
+
+// The pointer may have left (or the popover closed) during a click: look again.
+- (void)syncHover {
+    NSWindow *w = self.window;
+    BOOL inside = w && !self.isHiddenOrHasHiddenAncestor
+        && NSPointInRect([self convertPoint:w.mouseLocationOutsideOfEventStream fromView:nil], self.bounds);
+    if (inside == self.hovering) return;
+    self.hovering = inside;
+    [self updateFill:YES];
+}
+
+- (void)mouseEntered:(NSEvent *)e { [self syncHover]; }
+- (void)mouseExited:(NSEvent *)e { [self syncHover]; }
+- (void)viewDidMoveToWindow { [super viewDidMoveToWindow]; [self updateFill:NO]; }
+- (void)viewDidChangeEffectiveAppearance { [super viewDidChangeEffectiveAppearance]; [self updateFill:NO]; }
+
+// NSButton tracks the click inside -mouseDown:, so the pressed fill wraps it.
+- (void)mouseDown:(NSEvent *)e {
+    if (!self.isEnabled) return;
+    self.pressed = YES;
+    [self updateFill:NO];
+    [CATransaction flush];
+    [super mouseDown:e];
+    self.pressed = NO;
+    [self updateFill:YES];
+    [self syncHover];
+}
+
+@end
+
+#pragma mark - Tile
 
 @implementation TweakSiteTile
 
 + (instancetype)tileWithImage:(NSImage *)image label:(NSString *)label target:(id)target action:(SEL)action {
     TweakSiteTile *t = [[self alloc] initWithFrame:NSZeroRect];
-    t.bordered = NO;
-    t.title = @"";
     t.image = image;
     t.imagePosition = NSImageOnly;
     t.imageScaling = NSImageScaleProportionallyDown;
@@ -30,93 +84,76 @@ static void setFill(NSView *v, NSColor *color) {
     t.action = action;
     t.toolTip = label;
     t.accessibilityLabel = label;
-    t.refusesFirstResponder = YES;
-    t.focusRingType = NSFocusRingTypeNone;
     t.contentTintColor = NSColor.labelColor;
-    t.wantsLayer = YES;
-    t.radius = 8;
-    t.layer.cornerCurve = kCACornerCurveContinuous;
-    [t updateFill];
+    t.radius = ArcRadiusMedium;
+    [t updateFill:NO];
     return t;
 }
 
 + (instancetype)tileWithSymbol:(NSString *)symbol label:(NSString *)label target:(id)target action:(SEL)action {
     TweakSiteTile *t = [self tileWithImage:[NSImage imageWithSystemSymbolName:symbol accessibilityDescription:label]
                                      label:label target:target action:action];
-    t.symbolConfiguration = [NSImageSymbolConfiguration configurationWithPointSize:15 weight:NSFontWeightRegular];
+    t.symbolConfiguration = [NSImageSymbolConfiguration configurationWithPointSize:ArcTileIcon weight:NSFontWeightRegular];
     return t;
 }
 
-- (void)setRadius:(CGFloat)radius { _radius = radius; self.layer.cornerRadius = radius; }
-- (void)updateTrackingAreas { [super updateTrackingAreas]; trackHover(self); }
-- (void)mouseEntered:(NSEvent *)e { self.hovering = YES; [self updateFill]; }
-- (void)mouseExited:(NSEvent *)e { self.hovering = NO; [self updateFill]; }
-- (void)viewDidChangeEffectiveAppearance { [super viewDidChangeEffectiveAppearance]; [self updateFill]; }
-- (void)updateFill { setFill(self, self.hovering ? TweakPillFill(0.14, 0.09) : TweakPillFill(0.07, 0.045)); }
+- (void)setRadius:(CGFloat)radius { _radius = radius; ArcRound(self.layer, radius); }
+- (NSColor *)restFill { return ArcFillColor(ArcFillTile); }
 
 @end
 
 #pragma mark - Row
 
 @interface TweakSiteRow ()
-@property (nonatomic) BOOL hovering;
 @property (nonatomic, strong) NSView *circle;
 @end
 
 @implementation TweakSiteRow
 
 + (instancetype)rowWithSymbol:(NSString *)symbol title:(NSString *)title subtitle:(NSString *)subtitle target:(id)target action:(SEL)action {
-    TweakSiteRow *r = [[self alloc] initWithFrame:NSMakeRect(0, 0, 100, 44)];
-    r.bordered = NO;
-    r.title = @"";
+    CGFloat h = ArcRowHeight, d = ArcRowIconCircle, inset = (h - d) / 2;
+    TweakSiteRow *r = [[self alloc] initWithFrame:NSMakeRect(0, 0, 100, h)];
     r.target = target;
     r.action = action;
     r.accessibilityLabel = subtitle.length ? [NSString stringWithFormat:@"%@, %@", title, subtitle] : title;
-    r.refusesFirstResponder = YES;
-    r.focusRingType = NSFocusRingTypeNone;
-    r.wantsLayer = YES;
-    r.layer.cornerRadius = 8;
-    r.layer.cornerCurve = kCACornerCurveContinuous;
 
-    r.circle = [[NSView alloc] initWithFrame:NSMakeRect(6, 6, 32, 32)];
+    r.circle = [[NSView alloc] initWithFrame:NSMakeRect(inset, inset, d, d)];
     r.circle.wantsLayer = YES;
-    r.circle.layer.cornerRadius = 16;
+    r.circle.layer.cornerRadius = d / 2;
     [r addSubview:r.circle];
     NSImageView *icon = [NSImageView imageViewWithImage:[NSImage imageWithSystemSymbolName:symbol accessibilityDescription:nil]];
-    icon.symbolConfiguration = [NSImageSymbolConfiguration configurationWithPointSize:13 weight:NSFontWeightMedium];
+    icon.symbolConfiguration = [NSImageSymbolConfiguration configurationWithPointSize:ArcPillIcon weight:NSFontWeightMedium];
     icon.contentTintColor = NSColor.labelColor;
     icon.frame = r.circle.bounds;
     [r.circle addSubview:icon];
 
     NSTextField *t = [NSTextField labelWithString:title ?: @""];
-    t.font = [NSFont systemFontOfSize:13 weight:NSFontWeightMedium];
+    t.font = ArcFontRowTitle();
     t.lineBreakMode = NSLineBreakByTruncatingTail;
     NSTextField *s = [NSTextField labelWithString:subtitle ?: @""];
-    s.font = [NSFont systemFontOfSize:11];
-    s.textColor = NSColor.secondaryLabelColor;
+    s.font = ArcFontRowSubtitle();
+    s.textColor = ArcTextSecondary();
     s.lineBreakMode = NSLineBreakByTruncatingMiddle;
     t.autoresizingMask = s.autoresizingMask = NSViewWidthSizable;
     BOOL two = subtitle.length > 0;
-    t.frame = NSMakeRect(48, two ? 22 : 13, 52, 17);
-    s.frame = NSMakeRect(48, 6, 52, 15);
+    CGFloat x = inset + d + ArcSpace2, th = ceil(t.cell.cellSize.height), sh = ceil(s.cell.cellSize.height);
+    CGFloat sy = round((h - th - sh) / 2);   // the pair centred, subtitle below (unflipped)
+    t.frame = NSMakeRect(x, two ? sy + sh : round((h - th) / 2), 100 - x, th);
+    s.frame = NSMakeRect(x, sy, 100 - x, sh);
     s.hidden = !two;
     [r addSubview:t];
     [r addSubview:s];
-    [r updateFill];
+    [r updateFill:NO];
     return r;
 }
 
 - (BOOL)isFlipped { return NO; }
 - (NSView *)hitTest:(NSPoint)p { return NSPointInRect([self.superview convertPoint:p toView:self], self.bounds) ? self : nil; }
-- (void)updateTrackingAreas { [super updateTrackingAreas]; trackHover(self); }
-- (void)mouseEntered:(NSEvent *)e { self.hovering = YES; [self updateFill]; }
-- (void)mouseExited:(NSEvent *)e { self.hovering = NO; [self updateFill]; }
-- (void)viewDidChangeEffectiveAppearance { [super viewDidChangeEffectiveAppearance]; [self updateFill]; }
 - (void)drawRect:(NSRect)r {}   // no button bezel or title: the subviews are the content
 
-- (void)updateFill {
-    setFill(self, self.hovering ? TweakPillFill(0.08, 0.05) : NSColor.clearColor);
-    setFill(self.circle, TweakPillFill(0.12, 0.07));
+- (void)updateFill:(BOOL)animated {
+    [super updateFill:animated];
+    setFill(self.circle, ArcFillColor(ArcFillHover));
 }
 
 @end
@@ -125,8 +162,8 @@ static void setFill(NSView *v, NSColor *color) {
 
 NSTextField *TweakSiteSectionHeader(NSString *title) {
     NSTextField *l = [NSTextField labelWithString:title];
-    l.font = [NSFont systemFontOfSize:13 weight:NSFontWeightSemibold];
-    l.textColor = NSColor.secondaryLabelColor;
+    l.font = ArcFontSectionHeader();
+    l.textColor = ArcTextSecondary();
     return l;
 }
 
@@ -134,32 +171,32 @@ NSTextField *TweakSiteSectionHeader(NSString *title) {
 @end
 
 @implementation TweakSiteBadge
-- (void)viewDidChangeEffectiveAppearance { [super viewDidChangeEffectiveAppearance]; setFill(self, TweakPillFill(0.08, 0.05)); }
+- (void)viewDidChangeEffectiveAppearance { [super viewDidChangeEffectiveAppearance]; setFill(self, ArcFillColor(ArcFillRest)); }
 @end
 
 NSView *TweakSiteSecurityBadge(BOOL secure) {
     TweakSiteBadge *b = [[TweakSiteBadge alloc] initWithFrame:NSZeroRect];
     b.wantsLayer = YES;
     NSString *text = secure ? @"Secure" : @"Not secure";
+    CGFloat iconPt = ArcFontRowSubtitle().pointSize, iconBox = iconPt + 3, h = ArcBadgeHeight, x = ArcSpace2 + 2;
     NSImageView *icon = [NSImageView imageViewWithImage:
         [NSImage imageWithSystemSymbolName:secure ? @"lock.fill" : @"lock.open" accessibilityDescription:nil]];
-    icon.symbolConfiguration = [NSImageSymbolConfiguration configurationWithPointSize:11 weight:NSFontWeightMedium];
-    icon.contentTintColor = secure ? NSColor.secondaryLabelColor : NSColor.systemOrangeColor;
+    icon.symbolConfiguration = [NSImageSymbolConfiguration configurationWithPointSize:iconPt weight:NSFontWeightMedium];
+    icon.contentTintColor = secure ? ArcTextSecondary() : NSColor.systemOrangeColor;
     NSTextField *l = [NSTextField labelWithString:text];
-    l.font = [NSFont systemFontOfSize:12 weight:NSFontWeightMedium];
-    l.textColor = NSColor.secondaryLabelColor;
+    l.font = ArcFontChip();
+    l.textColor = ArcTextSecondary();
     [l sizeToFit];
-    CGFloat h = 26, x = 10;
-    icon.frame = NSMakeRect(x, (h - 14) / 2, 14, 14);
-    x += 14 + 5;
+    icon.frame = NSMakeRect(x, (h - iconBox) / 2, iconBox, iconBox);
+    x += iconBox + ArcSpace1;
     l.frame = NSMakeRect(x, (h - NSHeight(l.frame)) / 2, NSWidth(l.frame), NSHeight(l.frame));
-    b.frame = NSMakeRect(0, 0, NSMaxX(l.frame) + 11, h);
-    b.layer.cornerRadius = h / 2;
+    b.frame = NSMakeRect(0, 0, NSMaxX(l.frame) + ArcSpace2 + 2, h);
+    ArcRound(b.layer, h / 2);
     [b addSubview:icon];
     [b addSubview:l];
     b.accessibilityElement = YES;
     b.accessibilityRole = NSAccessibilityStaticTextRole;
     b.accessibilityLabel = text;
-    setFill(b, TweakPillFill(0.08, 0.05));
+    setFill(b, ArcFillColor(ArcFillRest));
     return b;
 }

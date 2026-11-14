@@ -55,6 +55,8 @@ NSView *TweakDescendantOfClass(NSView *root, NSString *className);
 // Runs the enabled main-menu item bound to key + exactly mods (⌘, ⌥, ⌃, ⇧), the way choosing it
 // would. Dia's own commands share one generic action, so the shortcut is what identifies them.
 BOOL TweakPerformMenuShortcut(NSString *key, NSEventModifierFlags mods);
+// The same for the enabled, visible item titled exactly `title` (commands with no shortcut).
+BOOL TweakPerformMenuTitle(NSString *title);
 Class TweakFindClass(NSString *prefix, NSString *suffix);
 // Replaces -[cls sel] with imp, returning the previous implementation
 // (the inherited one if cls didn't override sel).
@@ -78,6 +80,8 @@ BOOL TweakNavBarOpenEditor(NSWindow *window, NSRect anchorInWindow);  // Dia's U
 void TweakSidebarInstall(void);
 BOOL TweakSidebarHasURLBar(NSWindow *window);
 BOOL TweakSidebarFocusURLBar(NSWindow *window);
+// "Copied" in place, in the window's visible sidebar URL pill (SidebarPillInput.m). NO when it shows none.
+BOOL TweakSidebarShowCopiedFeedback(NSWindow *window);
 void TweakPreferencesInstall(void);
 void TweakPrivacyPatchArgv(void);   // call before main()
 void TweakPrivacyInstall(void);
@@ -117,6 +121,9 @@ BOOL TweakShortcutsHandle(NSEvent *keyDown);
 NSArray<NSDictionary *> *TweakArcShortcutSettings(void);   // Settings rows: {key, title, detail}
 BOOL TweakArcShortcutsHandle(NSEvent *keyDown, NSWindow *browserWindow);
 void TweakArcShortcutsInstall(void);
+// The active tab's URL without tracking parameters, or as "[title](URL)", to the pasteboard
+// (ArcShortcuts.m). NO when there is no page to copy.
+BOOL TweakCopyPageLink(NSWindow *window, BOOL markdown);
 
 // Tab tidying (Tabs.m), for the window's active profile.
 void TweakTabsInstall(void);   // call before main()

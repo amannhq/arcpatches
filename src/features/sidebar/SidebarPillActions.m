@@ -27,7 +27,7 @@
 
 @end
 
-#pragma mark - Copy link
+#pragma mark - Sites
 
 BOOL TweakSidebarURLIsSite(NSString *url) {
     if (!url.length) return NO;
@@ -36,15 +36,6 @@ BOOL TweakSidebarURLIsSite(NSString *url) {
     return ([scheme isEqualToString:@"https"] || [scheme isEqualToString:@"http"]) && c.host.length;
 }
 
-BOOL TweakSidebarCopyURL(NSWindow *window) {
-    NSString *u = TweakURLForWindow(window);
-    if (!u.length || [u isEqualToString:@"about:blank"]) return NO;
-    NSPasteboard *pb = NSPasteboard.generalPasteboard;
-    [pb clearContents];
-    BOOL ok = [pb setString:u forType:NSPasteboardTypeString];
-    if ([NSURL URLWithString:u]) [pb setString:u forType:NSPasteboardTypeURL];
-    return ok;
-}
 
 #pragma mark - Site controls
 

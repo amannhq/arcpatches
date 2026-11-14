@@ -7,9 +7,11 @@
 // it, only the sidebar's "Close all unpinned tabs" button.
 #import "Common.h"
 #import "CleanURL.h"
+#import "ArcStyle.h"
 
 static const NSEventModifierFlags kMods = NSEventModifierFlagControl | NSEventModifierFlagOption | NSEventModifierFlagShift | NSEventModifierFlagCommand;
 typedef BOOL (*TweakArcAction)(NSWindow *);   // NO: nothing done, the key goes on to Dia
+static const CGFloat kToastTop = 52;   // clear of the window controls
 
 #pragma mark - "Copied"
 
@@ -18,36 +20,42 @@ typedef BOOL (*TweakArcAction)(NSWindow *);   // NO: nothing done, the key goes 
 
 @implementation TweakCopiedBadge
 - (NSView *)hitTest:(NSPoint)point { return nil; }   // never takes clicks from the page
+- (BOOL)wantsUpdateLayer { return YES; }
+// A panel's near-opaque wash, not a translucent fill: it has to read over any page.
+- (void)updateLayer {
+    self.layer.backgroundColor = ArcPanelTint().CGColor;
+    self.layer.borderColor = ArcPanelBorder().CGColor;
+}
 @end
 
-// A small dark label near the top of the window that fades out on its own.
-static void showCopied(NSWindow *w, NSString *message) {
+// Only when the window shows no sidebar URL pill to confirm in: a small chip near the
+// top of the window that fades out on its own.
+static void showToast(NSWindow *w, NSString *message) {
     NSView *host = w.contentView;
     if (!host) return;
     for (NSView *v in host.subviews.copy)
         if ([v isKindOfClass:TweakCopiedBadge.class]) [v removeFromSuperview];
     NSTextField *label = [NSTextField labelWithString:message];
-    label.font = [NSFont systemFontOfSize:13 weight:NSFontWeightMedium];
-    label.textColor = NSColor.whiteColor;
+    label.font = ArcFontChip();
+    label.textColor = NSColor.labelColor;
     NSSize text = label.fittingSize;
-    NSSize size = NSMakeSize(ceil(text.width) + 28, ceil(text.height) + 12);
-    CGFloat top = 52;   // clear of the window controls
+    NSSize size = NSMakeSize(ceil(text.width) + 2 * ArcSpace3, ceil(text.height) + 2 * ArcSpace2);
     NSRect frame = NSMakeRect(round(NSMidX(host.bounds) - size.width / 2),
-                              host.isFlipped ? top : NSMaxY(host.bounds) - top - size.height, size.width, size.height);
+                              host.isFlipped ? kToastTop : NSMaxY(host.bounds) - kToastTop - size.height, size.width, size.height);
     TweakCopiedBadge *badge = [[TweakCopiedBadge alloc] initWithFrame:frame];
     badge.wantsLayer = YES;
-    badge.layer.backgroundColor = [NSColor colorWithWhite:0.1 alpha:0.85].CGColor;
-    badge.layer.cornerRadius = size.height / 2;
-    label.frame = NSMakeRect(14, round((size.height - text.height) / 2), ceil(text.width), ceil(text.height));
+    badge.layer.borderWidth = 1;
+    ArcRound(badge.layer, ArcRadiusMedium);
+    label.frame = NSMakeRect(ArcSpace3, round((size.height - text.height) / 2), ceil(text.width), ceil(text.height));
     [badge addSubview:label];
     badge.alphaValue = 0;
     [host addSubview:badge positioned:NSWindowAbove relativeTo:nil];
-    [NSAnimationContext runAnimationGroup:^(NSAnimationContext *ctx) { ctx.duration = 0.12; badge.animator.alphaValue = 1; }];
+    ArcAnimate(ArcDurationFast, YES, ^(__unused NSAnimationContext *ctx) { badge.animator.alphaValue = 1; }, nil);
     __weak TweakCopiedBadge *weakBadge = badge;
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.2 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(ArcFeedbackHold * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
         if (!weakBadge.superview) return;
-        [NSAnimationContext runAnimationGroup:^(NSAnimationContext *ctx) { ctx.duration = 0.3; weakBadge.animator.alphaValue = 0; }
-                            completionHandler:^{ [weakBadge removeFromSuperview]; }];
+        ArcAnimate(ArcDurationMedium, NO, ^(__unused NSAnimationContext *ctx) { weakBadge.animator.alphaValue = 0; },
+                   ^{ [weakBadge removeFromSuperview]; });
     });
     NSAccessibilityPostNotificationWithUserInfo(NSApp, NSAccessibilityAnnouncementRequestedNotification,
                                                 @{NSAccessibilityAnnouncementKey: message});
@@ -55,29 +63,33 @@ static void showCopied(NSWindow *w, NSString *message) {
 
 #pragma mark - Actions
 
-static BOOL copyText(NSWindow *w, NSString *text, BOOL isURL, NSString *message) {
+BOOL TweakCopyPageLink(NSWindow *w, BOOL markdown) {
+    NSString *url = TweakURLForWindow(w), *title = nil;
+    if (!url.length || [url isEqualToString:@"about:blank"]) return NO;
+    url = TweakCleanURL(url);
     NSPasteboard *pb = NSPasteboard.generalPasteboard;
     [pb clearContents];
-    [pb setString:text forType:NSPasteboardTypeString];
-    if (isURL) [pb setString:text forType:NSPasteboardTypeURL];
-    showCopied(w, message);
-    return YES;
-}
-
-static BOOL copyCleanURL(NSWindow *w) {
-    NSString *url = TweakURLForWindow(w);
-    return url.length && copyText(w, TweakCleanURL(url), YES, @"Copied");
-}
-
-static BOOL copyMarkdownLink(NSWindow *w) {
-    NSString *url = TweakURLForWindow(w), *title = nil;
-    if (!url.length) return NO;
+    if (!markdown) {
+        BOOL ok = [pb setString:url forType:NSPasteboardTypeString];
+        if ([NSURL URLWithString:url]) [pb setString:url forType:NSPasteboardTypeURL];
+        return ok;
+    }
     @try {
         id t = [TweakActiveTabForWindow(w) valueForKey:@"title"];
         if ([t isKindOfClass:NSString.class]) title = t;
     } @catch (__unused NSException *e) {}
-    return copyText(w, TweakMarkdownLink(title, TweakCleanURL(url)), NO, @"Copied as Markdown");
+    return [pb setString:TweakMarkdownLink(title, url) forType:NSPasteboardTypeString];
 }
+
+// Confirms in the sidebar's URL pill, where Arc does, else with a toast.
+static BOOL copyAndConfirm(NSWindow *w, BOOL markdown) {
+    if (!TweakCopyPageLink(w, markdown)) return NO;
+    if (!TweakSidebarShowCopiedFeedback(w)) showToast(w, markdown ? @"Copied as Markdown" : @"Copied");
+    return YES;
+}
+
+static BOOL copyCleanURL(NSWindow *w) { return copyAndConfirm(w, NO); }
+static BOOL copyMarkdownLink(NSWindow *w) { return copyAndConfirm(w, YES); }
 
 #pragma mark - Table
 

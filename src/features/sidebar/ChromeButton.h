@@ -4,9 +4,6 @@
 // goes away when disabled. Only size, radius and icon size differ between uses.
 #import "ArcStyle.h"
 
-static const CGFloat TweakChromeTopRowSize = 32;   // Arc's top-row hover square
-static const CGFloat TweakChromeTopRowIcon = 15;
-
 // Fades `layer`'s background to `color` (resolved in `view`'s appearance) over
 // ArcDurationFast, from whatever is on screen now; instant when not animated.
 void TweakChromeSetFill(NSView *view, CALayer *layer, NSColor *color, BOOL animated);

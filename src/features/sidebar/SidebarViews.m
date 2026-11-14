@@ -1,19 +1,13 @@
 // The sidebar's URL pill and its back/forward/reload buttons.
 #import "SidebarViews.h"
 #import "NavBarInternal.h"
+#import "Browser.h"
 
 static const CGFloat kSideInset = ArcSidebarInset;   // same as the pinned tiles and tabs below it
 static const CGFloat kTextInset = ArcSpace3;
 static const CGFloat kButtonSize = ArcPillButton;
 static const CGFloat kButtonGap = 2;
 static const NSTimeInterval kLoadingRecheck = 0.5;
-
-NSColor *TweakPillFill(CGFloat darkAlpha, CGFloat lightAlpha) {
-    return [NSColor colorWithName:nil dynamicProvider:^NSColor *(NSAppearance *a) {
-        BOOL dark = [[a bestMatchFromAppearancesWithNames:@[NSAppearanceNameAqua, NSAppearanceNameDarkAqua]] isEqualToString:NSAppearanceNameDarkAqua];
-        return dark ? [NSColor colorWithWhite:1 alpha:darkAlpha] : [NSColor colorWithWhite:0 alpha:lightAlpha];
-    }];
-}
 
 #pragma mark - URL pill
 
@@ -35,7 +29,7 @@ NSColor *TweakPillFill(CGFloat darkAlpha, CGFloat lightAlpha) {
     _label.font = ArcFontURL();
     _label.textColor = ArcTextSecondary();
     _label.lineBreakMode = NSLineBreakByTruncatingTail;
-    _label.placeholderString = @"Search or Enter URL...";   // Arc's empty-state wording
+    _label.placeholderString = @"Search or Enter URL…";   // Arc's empty-state wording
     _label.wantsLayer = YES;   // for the "Copied" crossfade
     [_pill addSubview:_label];
 
@@ -54,6 +48,7 @@ NSColor *TweakPillFill(CGFloat darkAlpha, CGFloat lightAlpha) {
     }
 
     [self updateAppearance:NO];
+    TweakSidebarPillRegister(self);
     return self;
 }
 
@@ -62,7 +57,7 @@ NSColor *TweakPillFill(CGFloat darkAlpha, CGFloat lightAlpha) {
 - (void)layout {
     [super layout];
     NSRect b = self.bounds;
-    CGFloat h = TWEAK_PILL_HEIGHT;
+    CGFloat h = ArcPillHeight;
     self.pill.frame = NSMakeRect(kSideInset, 2, NSWidth(b) - kSideInset * 2, h);
     CGFloat pad = (h - kButtonSize) / 2;
     CGFloat right = NSWidth(self.pill.frame) - pad;
@@ -112,7 +107,6 @@ NSColor *TweakPillFill(CGFloat darkAlpha, CGFloat lightAlpha) {
 - (void)mouseMoved:(NSEvent *)e { [self syncHover]; }
 - (void)mouseEntered:(NSEvent *)e { [self syncHover]; }
 - (void)mouseExited:(NSEvent *)e { [self syncHover]; }
-- (void)mouseDown:(NSEvent *)e { [self openEditor]; }   // the buttons take their own clicks
 - (void)viewDidChangeEffectiveAppearance { [super viewDidChangeEffectiveAppearance]; [self updateAppearance:NO]; }
 
 // Hovered, or its site-controls popover is open (the pointer is in the popover then).
@@ -169,24 +163,6 @@ NSColor *TweakPillFill(CGFloat darkAlpha, CGFloat lightAlpha) {
 
 #pragma mark Hover buttons
 
-- (void)copyLink:(id)sender {
-    if (!TweakSidebarCopyURL(self.window)) { NSBeep(); return; }
-    NSUInteger generation = ++self.feedbackGeneration;
-    self.showingFeedback = YES;
-    TweakChromeCrossfade(self.label.layer);
-    self.label.stringValue = @"Copied";
-    [self.linkButton setSymbol:@"checkmark" animated:YES];
-    __weak typeof(self) weakSelf = self;
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(ArcFeedbackHold * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        TweakSidebarURLBar *bar = weakSelf;
-        if (!bar || bar.feedbackGeneration != generation) return;   // a later copy owns the label now
-        bar.showingFeedback = NO;
-        TweakChromeCrossfade(bar.label.layer);
-        [bar.linkButton setSymbol:@"link" animated:YES];
-        [bar forceRefresh];
-    });
-}
-
 - (void)siteControls:(id)sender { TweakSidebarOpenSiteControls(sender); }
 
 @end
@@ -208,7 +184,7 @@ static BOOL gNavRefreshPending;
     NSArray *symbols = @[@"arrow.left", @"arrow.right", @"arrow.clockwise"];
     NSArray *labels = @[@"Back", @"Forward", @"Reload"];
     for (NSUInteger i = 0; i < symbols.count; i++) {
-        TweakChromeButton *b = [TweakChromeButton buttonWithSymbol:symbols[i] label:labels[i] pointSize:TweakChromeTopRowIcon
+        TweakChromeButton *b = [TweakChromeButton buttonWithSymbol:symbols[i] label:labels[i] pointSize:ArcTopRowIcon
                                                             radius:ArcRadiusMedium target:self action:@selector(tap:)];
         b.tag = i;
         [self addSubview:b];
@@ -220,7 +196,7 @@ static BOOL gNavRefreshPending;
 
 - (void)layout {
     [super layout];
-    CGFloat s = TweakChromeTopRowSize, x = 0, y = round((NSHeight(self.bounds) - s) / 2);
+    CGFloat s = ArcTopRowButton, x = 0, y = round((NSHeight(self.bounds) - s) / 2);
     for (NSView *b in self.subviews) { b.frame = NSMakeRect(x, y, s, s); x += s; }
 }
 
@@ -261,7 +237,21 @@ static BOOL gNavRefreshPending;
 }
 
 // While loading, Dia's own reload control (which TweakNavBarPerform presses) stops.
+// ⌘-click or middle-click on reload duplicates the tab, as in Arc. Back and forward have no
+// "in a new tab" here: Dia exposes no tab's history (nor a menu command for it), so they
+// navigate in place.
 - (void)tap:(NSButton *)sender {
+    NSEvent *e = NSApp.currentEvent;
+    BOOL newTab = e.type == NSEventTypeOtherMouseUp || (e.modifierFlags & NSEventModifierFlagCommand);
+    if (newTab && sender.tag == 2) {
+        NSWindow *w = self.window;
+        if (!w.isKeyWindow) [w makeKeyWindow];   // Dia's menu acts on the key window
+        if (!TweakPerformMenuTitle(kDiaDuplicateTabTitle)) {
+            NSString *u = TweakURLForWindow(w);
+            if (u.length) TweakOpenInNewTab(w, u);
+        }
+        return;
+    }
     if (sender.tag == 2 && !self.loading) [(TweakChromeButton *)sender spinIcon];   // Arc's reload turn
     TweakNavBarPerform(self.window, sender.tag);
     __weak typeof(self) weakSelf = self;

@@ -32,7 +32,7 @@ These are the terms we use for the small interactions:
 | --- | --- | --- |
 | Spacing | `ArcSpace1–4` (4, 8, 12, 16), `ArcSidebarInset` (6) | 4-pt grid |
 | Radii | Chip 6, Small 7, Medium 8, Pill 10, Popover 14 | Always continuous corners (`ArcRound`) |
-| Sizes | Top-row button 32 / icon 15, pill 36, pill button 28 / icon 13, popover 272 wide, tile 34, row icon 30, favicon 18, chip 26 (rounded square behind a row's action icon) | Hit areas are never smaller than 28 pt |
+| Sizes | Top-row button 32 / icon 15, pill 36, pill button 28 / icon 13, popover 272 wide, tile 44 (icon 15), settings row 44 with a 32 round icon, footer chip 26, favicon 18, chip 26 (rounded square behind a row's action icon) | Hit areas are never smaller than 28 pt |
 | Type | URL 13 regular, row title 13 medium, subtitle 11, section header 12 semibold, chip 12 medium, palette field 20 regular, palette row 15 medium, palette detail 14 regular, accessory ("Switch to Tab") 14 medium | System font only |
 | Fill | Rest 8%, hover 11%, pressed 16%, selected 14%, tile 7% | White on dark chrome, black on light (about 60% of the dark alpha) |
 | Icon colour | Secondary label, or tertiary when disabled | Never full-contrast labels in chrome |
@@ -43,8 +43,8 @@ These are the terms we use for the small interactions:
 
 ## Components
 
-- **Top row:** the sidebar toggle sits at the leading edge (after the window buttons, or at the inset in full screen), and back, forward and reload sit trailing. Each is a 32 pt square with a medium-radius hover fill.
-- **URL pill:** shows the host only (no scheme, no `www.`, the port kept for local servers). On hover, the copy-link and site-controls buttons fade in at the trailing edge and the host truncates to make room. Clicking the text opens the address editor.
+- **Top row:** the sidebar toggle sits at the leading edge (after the window buttons, or at the inset in full screen), and back, forward and reload sit trailing, their right edge on the URL pill's. Each is a 32 pt square with a medium-radius hover fill. ⌘-click or middle-click on reload duplicates the tab.
+- **URL pill:** shows the host only (no scheme, no `www.`, the port kept for local servers). On hover, the copy-link and site-controls buttons fade in at the trailing edge and the host truncates to make room. Clicking the text opens the address editor, dragging it drags the link, and right-clicking shows Copy Link, Copy as Markdown Link and Site Controls….
 - **Site controls popover:** in this order:
   1. a row of action tiles
   2. **Extensions**, a 4-column grid
@@ -52,7 +52,7 @@ These are the terms we use for the small interactions:
   4. a hairline, then a footer with a security chip and a "…" menu
 - **Command palette (⌘T):** a floating panel centred over the web content: a search row, a hairline, then up to eight rows. Open tabs end in "Switch to Tab" and an arrow chip, which turn full contrast on the highlighted row. It fades in from 0.98 scale and fades out.
 - **URL editor (⌘L):** drops down from the URL pill, covering it: the site's favicon and the full URL (selected), then the current page, the site's root and related history before you type.
-- **Feedback:** confirm in place. "Copied" replaces the host and the link icon becomes a checkmark, then both restore. No toasts for actions that happened where you clicked.
+- **Feedback:** confirm in place. "Copied" replaces the host and the link icon becomes a checkmark, then both restore. Copies from the popover and from ⌘⇧C confirm in the pill too; a toast appears only when the window has no pill.
 
 ## Voice
 

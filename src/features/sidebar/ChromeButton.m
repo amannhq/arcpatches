@@ -182,4 +182,22 @@ void TweakChromeFade(NSView *v, BOOL shown) {
     [self syncHover];
 }
 
+// Middle click: pressed while down, the action on release inside (it reads the event's
+// type from NSApp.currentEvent, e.g. back/forward/reload "in a new tab").
+// Tracked here, like NSButton tracks a left click, so the pressed look can't stick.
+- (void)otherMouseDown:(NSEvent *)e {
+    if (e.buttonNumber != 2 || !self.isEnabled) { [super otherMouseDown:e]; return; }
+    self.pressed = YES;
+    [self updateLook:NO];
+    NSEvent *up = nil;
+    while ((up = [self.window nextEventMatchingMask:NSEventMaskOtherMouseUp | NSEventMaskOtherMouseDragged])) {
+        if (up.type == NSEventTypeOtherMouseUp && up.buttonNumber == 2) break;
+    }
+    self.pressed = NO;
+    [self updateLook:YES];
+    if (up && self.isEnabled && NSPointInRect([self convertPoint:up.locationInWindow fromView:nil], self.bounds))
+        [self sendAction:self.action to:self.target];
+    [self syncHover];
+}
+
 @end
