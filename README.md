@@ -135,7 +135,7 @@ By default Dia is patched in place and keeps its name and profile. The original 
 To leave the original app untouched, turn off **Patch Dia directly**. ArcPatches then builds a separate `~/Applications/Dia Arc.app`.
 Use one or the other, not both, because they share a profile.
 
-**Uninstall:** click **Restore** next to "Put the original Dia back" in ArcPatches (in copy mode, delete `~/Applications/Dia Arc.app` instead), then delete `ArcPatches.app`.
+**Uninstall:** quit Dia, then choose **Uninstall ArcPatches…** from the ArcPatches menu (or the window's **Uninstall…** button), or run `/Applications/ArcPatches.app/Contents/MacOS/ArcPatches --uninstall`. That puts the original Dia back, moves a separate "Dia Arc" copy to the Trash, and removes the background job and login item. Then delete `ArcPatches.app`. To remove everything, also delete `~/Library/Application Support/arcpatches`, which holds the backup of the original Dia.
 
 ### Build from source
 
