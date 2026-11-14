@@ -1,8 +1,10 @@
 // Performance: turns off Dia's on-device AI service and exposes a few Chromium
-// switches. Chromium switches are read once at launch.
+// switches. Chromium switches are read once at launch: in Dia through Privacy's
+// argv hook (PrivacyArgv.m), in Ardia through its ARDIA_CHROMIUM_SWITCHES variable.
 #import "Common.h"
 #import "Features.h"
 #import "Browser.h"
+#import "../../browsers/ardia/Browser.h"
 #import <objc/runtime.h>
 
 NSString *const TweakKeyDisableOnDeviceAI = @"arcpatches.disableOnDeviceAI";
@@ -49,4 +51,10 @@ void TweakPerformanceInstall(void) {
     }
 }
 
-const TweakFeature TweakFeaturePerformance = {"performance", {TWEAK_BROWSER_DIA}, TweakPerformanceInstall, NULL};
+// Ardia has no ArcAIService (on-device AI) to stop; only the switches apply there.
+static void installPerformanceEarly(void) {
+    if ([TweakRunningBrowser() isEqualToString:kArdiaBrowserID]) TweakArdiaAppendChromiumSwitches(TweakPerformanceSwitches());
+    else TweakPerformanceInstall();
+}
+
+const TweakFeature TweakFeaturePerformance = {"performance", {TWEAK_BROWSER_DIA, TWEAK_BROWSER_ARDIA}, installPerformanceEarly, NULL};

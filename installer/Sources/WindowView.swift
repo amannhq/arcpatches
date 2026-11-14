@@ -48,10 +48,14 @@ struct ArcPatchesWindowView: View {
     // MARK: Sections
 
     @ViewBuilder private var patchedRows: some View {
+        if browserChoices.count > 1 {
+            browserRow
+            Divider().padding(.leading, 14)
+        }
         row {
             VStack(alignment: .leading, spacing: 2) {
                 Text(c.statusLine)
-                Text("Patch \(c.engine.patchVersion)" + (c.status.patchedFrom.map { " · built from Dia \($0)" } ?? ""))
+                Text("Patch \(c.engine.patchVersion)" + (c.status.patchedFrom.map { " · built from \(c.browserName) \($0)" } ?? ""))
                     .font(.caption).foregroundStyle(.secondary)
             }
         } trailing: {
@@ -59,17 +63,17 @@ struct ArcPatchesWindowView: View {
         }
         Divider().padding(.leading, 14)
         row {
-            Text(c.status.isUpToDate ? "Rebuild from the installed Dia" : "Patch now")
+            Text(c.status.isUpToDate ? "Rebuild from the installed \(c.browserName)" : "Patch now")
         } trailing: {
             Button(c.status.isUpToDate ? "Rebuild" : "Patch") { c.repatch() }.disabled(c.busy != nil)
         }
         Divider().padding(.leading, 14)
         row {
             VStack(alignment: .leading, spacing: 2) {
-                Text("Patch Dia directly")
+                Text("Patch \(c.browserName) directly")
                 Text(c.patchInPlace
-                     ? "Dia itself becomes \(PatchEngine.appName). The original is kept, so you can restore it anytime."
-                     : "\(PatchEngine.appName) is a separate copy in ~/Applications; your regular Dia stays untouched.")
+                     ? "\(c.browserName) itself becomes \(PatchEngine.appName). The original is kept, so you can restore it anytime."
+                     : "\(PatchEngine.appName) is a separate copy in ~/Applications; your regular \(c.browserName) stays untouched.")
                     .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
         } trailing: {
@@ -78,9 +82,31 @@ struct ArcPatchesWindowView: View {
         }
         if c.patchInPlace, PatchEngine.isPatched(PatchEngine.source) {
             Divider().padding(.leading, 14)
-            row { Text("Put the original Dia back") } trailing: {
+            row { Text("Put the original \(c.browserName) back") } trailing: {
                 Button("Restore") { c.restoreOriginal() }.disabled(c.busy != nil)
             }
+        }
+    }
+
+    /// Installed browsers arcpatches does something in, plus the selected one (even if it was uninstalled).
+    private var browserChoices: [BrowserTarget] {
+        let pickable = BrowserTarget.pickable
+        return pickable.contains(c.browser) ? pickable : [c.browser] + pickable
+    }
+
+    @ViewBuilder private var browserRow: some View {
+        row {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Browser")
+                if let caveat = c.browser.caveat {
+                    Text(caveat).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        } trailing: {
+            Picker("", selection: Binding(get: { c.browser.id }, set: { id in BrowserTarget.with(id: id).map(c.selectBrowser) })) {
+                ForEach(browserChoices, id: \.id) { Text($0.name).tag($0.id) }
+            }
+            .labelsHidden().fixedSize().disabled(c.busy != nil)
         }
     }
 
@@ -101,14 +127,14 @@ struct ArcPatchesWindowView: View {
         Divider().padding(.leading, 14)
         row {
             VStack(alignment: .leading, spacing: 2) {
-                Text("Dia updates itself")
+                Text("\(c.browserName) updates itself")
                 Text(c.updateHint ?? (c.patchInPlace
-                     ? "Use Dia ▸ Check for Updates in \(PatchEngine.appName). If that fails, Update Dia… opens the original to update; ArcPatches re-patches after."
-                     : "Open the regular Dia and use its own updater. ArcPatches re-patches when Dia changes."))
+                     ? "Use \(c.browserName) ▸ Check for Updates in \(PatchEngine.appName). If that fails, Update \(c.browserName)… opens the original to update; ArcPatches re-patches after."
+                     : "Open the regular \(c.browserName) and use its own updater. ArcPatches re-patches when \(c.browserName) changes."))
                     .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
         } trailing: {
-            Button("Update Dia…") { c.updateDia() }.disabled(c.busy != nil)
+            Button("Update \(c.browserName)…") { c.updateDia() }.disabled(c.busy != nil)
         }
         if let e = c.lastError {
             Divider().padding(.leading, 14)
@@ -134,7 +160,7 @@ struct ArcPatchesWindowView: View {
                 }
             }
             HStack {
-                Text("Checked when \(PatchEngine.appName) last opened (Dia \(h.diaVersion))").font(.caption).foregroundStyle(.secondary)
+                Text("Checked when \(PatchEngine.appName) last opened (\(c.browserName) \(h.diaVersion))").font(.caption).foregroundStyle(.secondary)
                 Spacer()
                 if h.failures > 0, h.date != Prefs.dismissedHealthDate {
                     Button("Dismiss") { c.dismissHealth() }.controlSize(.small)

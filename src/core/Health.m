@@ -1,8 +1,12 @@
 // Writes ~/Library/Application Support/arcpatches/health.json at launch: which of
 // Dia's internals each feature relies on are still present. The companion app
-// shows this so a Dia update that breaks a feature doesn't go unnoticed.
+// shows this so a Dia update that breaks a feature doesn't go unnoticed. Other
+// browsers report their own checks to arcpatches/<id>/health.json.
 #import "Common.h"
+#import "Features.h"
 #import "Browser.h"
+#import "Browsers.h"
+#import "../browsers/ardia/Browser.h"
 #import <objc/runtime.h>
 
 #ifndef ARCPATCHES_VERSION
@@ -23,8 +27,8 @@ static BOOL hasScriptingWindows(void) {
     @catch (__unused NSException *e) { return NO; }
 }
 
-void TweakHealthWrite(void) {
-    NSDictionary *checks = @{
+static NSDictionary *diaChecks(void) {
+    return @{
         @"URL bar hiding": @(NSClassFromString(kDiaContentPaneClass) && NSClassFromString(kDiaNavigationBarClass)),
         @"Sidebar URL bar": @(TweakFindClass(kDiaSidebarRootPrefix, kDiaSidebarRootSuffix) != nil),
         @"Settings pane": @(hasMethod(kDiaPreferencesListClass, @selector(tableView:viewForTableColumn:row:))),
@@ -36,6 +40,13 @@ void TweakHealthWrite(void) {
         @"Hide AI features": @(NSClassFromString(kDiaSidebarFooterClass) && NSClassFromString(kDiaEditorToolbarClass)),
         @"On-device AI off": @(hasMethod(kDiaAIServiceClass, @selector(initialize:callback:))),
     };
+}
+
+void TweakHealthWrite(void) {
+    NSString *browser = TweakRunningBrowser();
+    BOOL dia = [browser isEqualToString:kDiaBrowserID];
+    NSDictionary *checks = dia ? diaChecks()
+        : [browser isEqualToString:kArdiaBrowserID] ? TweakArdiaHealthChecks() : @{};
     NSDictionary *info = NSBundle.mainBundle.infoDictionary;
     NSDictionary *report = @{
         @"patchVersion": TweakPatchVersion(),
@@ -44,7 +55,12 @@ void TweakHealthWrite(void) {
         @"date": [[NSISO8601DateFormatter new] stringFromDate:NSDate.date],
         @"checks": checks,
     };
-    NSString *dir = [NSHomeDirectory() stringByAppendingPathComponent:@"Library/Application Support/arcpatches"];
+    if (!dia) {   // Dia's report stays exactly as it was; the others also name their browser
+        NSMutableDictionary *r = [report mutableCopy];
+        r[@"browser"] = browser ?: @"?";
+        report = r;
+    }
+    NSString *dir = TweakBrowserSupportDir(browser);
     [NSFileManager.defaultManager createDirectoryAtPath:dir withIntermediateDirectories:YES attributes:nil error:nil];
     NSData *json = [NSJSONSerialization dataWithJSONObject:report options:NSJSONWritingPrettyPrinted | NSJSONWritingSortedKeys error:nil];
     [json writeToFile:[dir stringByAppendingPathComponent:@"health.json"] atomically:YES];

@@ -27,10 +27,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
         c.onChange = { [weak self] in self?.refresh() }
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert]) { _, _ in }
 
-        // Re-check when Dia or Dia Arc quits (that's when patching/updating is possible).
+        // Re-check when the browser or its Arc build quits (that's when patching/updating is possible).
         NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.didTerminateApplicationNotification, object: nil, queue: .main) { [weak self] note in
             guard let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
-                  app.bundleIdentifier == "company.thebrowser.dia" else { return }
+                  app.bundleIdentifier == PatchEngine.browser.bundleId else { return }
             MainActor.assumeIsolated { self?.c.tick() }
         }
         let local = Timer.scheduledTimer(withTimeInterval: 120, repeats: true) { [weak self] _ in MainActor.assumeIsolated { self?.c.tick() } }
@@ -123,7 +123,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
         if let r = c.selfUpdate {
             menu.addItem(item("Update ArcPatches to \(r.version)", "") { $0.c.installSelfUpdate(r) })
         }
-        menu.addItem(item("Update Dia…", "u") { $0.c.updateDia(); $0.showWindow() })
+        menu.addItem(item("Update \(c.browserName)…", "u") { $0.c.updateDia(); $0.showWindow() })
         let patch = item(c.status.isUpToDate ? "Rebuild \(PatchEngine.appName)" : "Patch Now", "p") { $0.c.repatch() }
         patch.isEnabled = c.busy == nil
         menu.addItem(patch)
@@ -153,7 +153,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
 }
 
 // Diagnostics: ArcPatches.app/Contents/MacOS/ArcPatches --status | --patch | --background-check | ...
-let cliFlags: Set<String> = ["--status", "--patch", "--update-from", "--background-check", "--background-mode", "--make-icon", "--restore", "--mode", "--help"]
+let cliFlags: Set<String> = ["--status", "--browser", "--patch", "--update-from", "--background-check", "--background-mode", "--make-icon", "--restore", "--mode", "--help"]
 if let flag = CommandLine.arguments.dropFirst().first, cliFlags.contains(flag) {
     let engine = PatchEngine(resources: Bundle.main.resourceURL!)
     var finished = false
@@ -163,8 +163,17 @@ if let flag = CommandLine.arguments.dropFirst().first, cliFlags.contains(flag) {
             switch flag {
             case "--status":
                 let s = engine.status()
-                print("mode: \(PatchEngine.mode.rawValue)  target: \(PatchEngine.destination.path)  running: \(PatchEngine.patchedIsRunning)  Dia running: \(PatchEngine.diaIsRunning)")
-                print("Dia: \(s.diaVersion ?? "missing")  Dia Arc: \(s.patchedFrom ?? "not built")  patch: \(engine.patchVersion)  state: \(s.state)  menu bar: \(Prefs.menuBarMode.rawValue)  background job: \(BackgroundAgent.isInstalled)")
+                let n = PatchEngine.browser.name
+                print("browser: \(PatchEngine.browser.id)  mode: \(PatchEngine.mode.rawValue)  target: \(PatchEngine.destination.path)  running: \(PatchEngine.patchedIsRunning)  \(n) running: \(PatchEngine.diaIsRunning)")
+                print("\(n): \(s.diaVersion ?? "missing")  \(PatchEngine.appName): \(s.patchedFrom ?? "not built")  patch: \(engine.patchVersion)  state: \(s.state)  menu bar: \(Prefs.menuBarMode.rawValue)  background job: \(BackgroundAgent.isInstalled)")
+            case "--browser":
+                // Which browser to patch: dia (default), or another installed one arcpatches supports.
+                guard CommandLine.arguments.count > 2, let b = BrowserTarget.with(id: CommandLine.arguments[2]), BrowserTarget.pickable.contains(b) else {
+                    print("usage: --browser \(BrowserTarget.pickable.map(\.id).joined(separator: "|"))  (now: \(PatchEngine.browser.id))"); break
+                }
+                BrowserTarget.selected = b
+                if BackgroundAgent.isInstalled { BackgroundAgent.install() }
+                print("Browser: \(b.name)")
             case "--background-mode":
                 let on = CommandLine.arguments.count > 2 && CommandLine.arguments[2] == "on"
                 if on { LoginItem.set(false); BackgroundAgent.install() } else { BackgroundAgent.uninstall() }
@@ -190,7 +199,7 @@ if let flag = CommandLine.arguments.dropFirst().first, cliFlags.contains(flag) {
                 try engine.patch()
                 print("Patched: \(PatchEngine.version(PatchEngine.destination) ?? "?")")
             default:
-                print("usage: ArcPatches [--status | --patch | --restore | --mode inPlace|copy | --background-check | --background-mode on|off]")
+                print("usage: ArcPatches [--status | --browser <id> | --patch | --restore | --mode inPlace|copy | --background-check | --background-mode on|off]")
             }
         } catch {
             print("error: \(error.localizedDescription)")

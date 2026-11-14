@@ -37,8 +37,9 @@ Every feature can be switched off in **Settings → ArcPatches** inside the patc
 | Browser | Status |
 | --- | --- |
 | **Dia** (macOS) | ✅ Supported. Tested on 1.57.x. |
-| Ardia, Chrome | 🧪 Investigating. See [docs/browsers.md](docs/browsers.md) for what can work and why. |
-| Arc | ❌ Not a target. Arc already is Arc, and The Browser Company is retiring it. |
+| Ardia | ⚠️ Partial: only the Chromium performance switches. Its UI is React Native, so it can't be patched like Dia's. |
+| Chrome | ❌ Not supported. Its UI is drawn by Chromium's own C++ views. |
+| Arc | ➖ Not a target. Arc already is Arc, and The Browser Company is retiring it. |
 
 ## Install
 

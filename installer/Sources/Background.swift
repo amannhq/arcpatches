@@ -1,5 +1,5 @@
 // Background mode: no menu bar icon, no running app. A launchd job runs
-// `ArcPatches --background-check` when Dia changes (e.g. it updated itself), every 30
+// `ArcPatches --background-check` when the selected browser (Dia by default) changes (e.g. it updated itself), every 30
 // minutes, and right after Dia Arc quits (the patch kicks the job). Each run
 // re-patches if needed and exits.
 import AppKit
@@ -59,10 +59,10 @@ func runBackgroundCheck() async {
     if case .needsPatch(let why) = engine.status().state, autoRepatch, !PatchEngine.patchedIsRunning {
         do {
             try engine.patch()
-            await notify("\(PatchEngine.appName) is ready", "\(why) — patched for Dia \(PatchEngine.version(PatchEngine.source) ?? "").")
+            await notify("\(PatchEngine.appName) is ready", "\(why) — patched for \(PatchEngine.browser.name) \(PatchEngine.version(PatchEngine.source) ?? "").")
         } catch PatchError.busy {
         } catch {
-            await notify("Couldn't patch Dia", error.localizedDescription)
+            await notify("Couldn't patch \(PatchEngine.browser.name)", error.localizedDescription)
         }
     }
 

@@ -40,12 +40,35 @@ if swift "$ROOT/tools/update-key.swift" verify "$WORK/file" "$WORK/file.sig" "$P
 pass "update signatures verify and reject tampering"
 
 # 4. Nothing of Dia's is in the repository.
-if find "$ROOT" -path "$ROOT/build" -prune -o \( -name '*.icns' -o -name '*.car' -o -name 'Dia.app' \) -print | grep -q .; then
+if git -C "$ROOT" ls-files | grep -qE '\.(icns|car)$|(^|/)Dia\.app(/|$)'; then
     echo "FAIL Dia assets found in the repository"; exit 1
 fi
 pass "no Dia binaries or artwork in the repository"
 
-# 5. Optional: the browser classes src/ looks up by name exist in the installed Dia.
+# 5. Browser registry and support matrix, against the dylib built in step 1 (docs/browsers.md).
+clang -fobjc-arc -framework Foundation -I"$ROOT/src/core" -I"$ROOT/src" -o "$WORK/browsers" "$ROOT/tests/browsers.m" "$WORK/arcpatches.dylib"
+if ! "$WORK/browsers" 2>"$WORK/browsers.log"; then grep FAIL "$WORK/browsers.log"; echo "FAIL browser registry"; exit 1; fi
+pass "browser registry: Dia, Ardia and Chrome recognised, Arc excluded, Ardia switches round-trip"
+
+# 6. The companion (installer/Sources/Browsers.swift) offers a browser only for features
+#    that declare it in TweakFeature.browsers, and offers every browser that has one.
+objcFeatures() {
+    local macro
+    macro="$(grep -h "^#define TWEAK_BROWSER_[A-Z]* \"$1\"" "$ROOT"/src/browsers/*/Browser.h | awk '{print $2}')"
+    [ -n "$macro" ] || return 0
+    grep -rh "^const TweakFeature " "$ROOT/src/features" | grep -w "$macro" | sed -E 's/^[^"]*"([^"]+)".*/\1/' | sort || true
+}
+while IFS=: read -r id claimed; do
+    declared="$(objcFeatures "$id")"
+    for f in ${claimed//,/ }; do
+        grep -qx "$f" <<<"$declared" || { echo "FAIL companion says $id supports $f, but src/features/$f doesn't declare it"; exit 1; }
+    done
+    if [ -n "$declared" ] && [ -z "$claimed" ]; then echo "FAIL $id has features ($declared) but the companion never offers it"; exit 1; fi
+done < <(awk '/ id: "/ { match($0, /id: "[^"]+"/); id = substr($0, RSTART + 5, RLENGTH - 6) }
+              /features: \[("|\])/ { match($0, /features: \[[^]]*\]/); f = substr($0, RSTART + 11, RLENGTH - 12); gsub(/[" ]/, "", f); print id ":" f }' \
+              "$ROOT/installer/Sources/Browsers.swift")
+pass "companion's browser list matches what the features declare"
+# 7. Optional: the browser classes src/ looks up by name exist in the installed Dia.
 # Reads its binaries' strings only; skipped where there is no Dia (CI).
 if [ -d /Applications/Dia.app ]; then
     if ! "$ROOT/scripts/check-classes.sh" /Applications/Dia.app > "$WORK/classes.txt"; then
