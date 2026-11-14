@@ -6,6 +6,7 @@
 //   swift -e 'import Foundation; DistributedNotificationCenter.default().postNotificationName(.init("dev.amannhq.arcpatches.dump"), object: nil, userInfo: nil, deliverImmediately: true)'
 #import "Common.h"
 #import <objc/message.h>
+#import <objc/runtime.h>
 
 static NSString *const kDumpNotification = @"dev.amannhq.arcpatches.dump";
 
@@ -58,12 +59,40 @@ static void dumpMenu(NSMenu *menu, NSMutableString *out, int depth) {
     }
 }
 
+
+// Every zero-argument method whose name mentions a URL on the key window's active
+// scripting tab, with its value: where a pinned tab's live address might be kept.
+static void dumpActiveTab(void) {
+    NSMutableString *out = [NSMutableString string];
+    id tab = TweakActiveTabForWindow(NSApp.keyWindow ?: NSApp.mainWindow ?: NSApp.windows.firstObject);
+    for (Class c = [tab class]; c && c != NSObject.class; c = class_getSuperclass(c)) {
+        [out appendFormat:@"class %@\n", NSStringFromClass(c)];
+        unsigned n = 0;
+        Method *ms = class_copyMethodList(c, &n);
+        for (unsigned i = 0; i < n; i++) {
+            SEL sel = method_getName(ms[i]);
+            NSString *name = NSStringFromSelector(sel);
+            if ([name containsString:@":"] || [name rangeOfString:@"url" options:NSCaseInsensitiveSearch].location == NSNotFound) continue;
+            const char *ret = method_copyReturnType(ms[i]);
+            BOOL object = ret && ret[0] == '@';
+            free((void *)ret);
+            id val = nil;
+            if (object) @try { val = ((id (*)(id, SEL))objc_msgSend)(tab, sel); } @catch (__unused NSException *e) {}
+            [out appendFormat:@"  %@ = %@\n", name, object ? val : @"(not an object)"];
+        }
+        free(ms);
+    }
+    NSString *dir = [NSHomeDirectory() stringByAppendingPathComponent:@"Library/Application Support/arcpatches"];
+    [out writeToFile:[dir stringByAppendingPathComponent:@"tab.txt"] atomically:YES encoding:NSUTF8StringEncoding error:nil];
+}
+
 @interface TweakDevDumpObserver : NSObject
 @end
 @implementation TweakDevDumpObserver
 - (void)dump:(NSNotification *)n {
     dispatch_async(dispatch_get_main_queue(), ^{
         dumpAll();
+        dumpActiveTab();
         NSMutableString *menus = [NSMutableString string];
         dumpMenu(NSApp.mainMenu, menus, 0);
         NSString *dir = [NSHomeDirectory() stringByAppendingPathComponent:@"Library/Application Support/arcpatches"];

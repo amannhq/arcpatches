@@ -156,6 +156,27 @@
   }
 }
 
+/* On wider screens the print fills the first screen under the nav, and the paper panel
+   sits on it at the bottom left, like a cover. */
+@media (min-width: 640px) {
+  .hero {
+    display: grid;
+    align-items: end;
+    min-height: calc(100svh - var(--nav-h, 57px));
+    padding-bottom: 0;
+  }
+  .hero-art {
+    position: absolute;
+    inset: 0;
+    height: auto;
+  }
+  .hero-wrap {
+    position: relative;
+    margin-top: 0;
+    padding-block: 48px clamp(40px, 7vh, 88px);
+  }
+}
+
 .hero-links {
   display: flex;
   flex-wrap: wrap;
