@@ -151,12 +151,22 @@ static NSMenuItem *screenshotItem(NSMenu *menu, int depth) {
     if ([anchor respondsToSelector:@selector(updateFill)]) [anchor updateFill];
 }
 
-- (void)popoverDidClose:(NSNotification *)n {
-    if (self.escapeMonitor) [NSEvent removeMonitor:self.escapeMonitor];
-    self.escapeMonitor = nil;
+// Before the close animation: the button's mouse up may come before didClose.
+- (void)popoverWillClose:(NSNotification *)n {
     gClosedAnchor = self.anchor;
     gClosedAt = NSProcessInfo.processInfo.systemUptime;
+}
+
+- (void)popoverDidClose:(NSNotification *)n { [self finish]; }
+
+// Idempotent: from didClose, and after -close (which may not tell the delegate).
+- (void)finish {
+    if (self.escapeMonitor) [NSEvent removeMonitor:self.escapeMonitor];
+    self.escapeMonitor = nil;
     if (gShown == self) gShown = nil;
+    // The popover and this controller hold each other; let both go once it is gone.
+    NSPopover *popover = self.popover;
+    dispatch_async(dispatch_get_main_queue(), ^{ if (!popover.shown) popover.contentViewController = nil; });
     NSView *anchor = self.anchor;
     if ([anchor respondsToSelector:@selector(updateFill)]) [anchor updateFill];
     // The pill decides again whether its buttons show, now that this one may hide.
@@ -170,6 +180,7 @@ static NSMenuItem *screenshotItem(NSMenu *menu, int depth) {
     NSWindow *w = self.browserWindow;
     NSString *u = self.url;
     [self.popover close];
+    [self finish];
     dispatch_async(dispatch_get_main_queue(), ^{ if (w) action(w, u); });
 }
 
@@ -188,7 +199,7 @@ void TweakSiteControlsToggle(NSView *anchor) {
     if (TweakSiteControlsIsShownFor(anchor)) { [gShown.popover performClose:nil]; return; }
     // The click on the button closed the transient popover on mouse down: that click means close.
     if (gClosedAnchor == anchor && NSProcessInfo.processInfo.systemUptime - gClosedAt < 0.3) return;
-    [gShown.popover close];
+    if (gShown) { TweakSiteControls *old = gShown; [old.popover close]; [old finish]; }
     gShown = [TweakSiteControls new];
     [gShown showFrom:anchor];
 }

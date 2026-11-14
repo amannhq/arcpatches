@@ -17,7 +17,7 @@ static NSString *const kWebStoreURL = @"https://chromewebstore.google.com";
 }
 
 - (void)sharingServicePicker:(NSSharingServicePicker *)picker didChooseSharingService:(NSSharingService *)service {
-    if (service) [self.popover close];
+    if (service) { [self.popover close]; [self finish]; }
 }
 
 - (void)copyLink:(id)sender {

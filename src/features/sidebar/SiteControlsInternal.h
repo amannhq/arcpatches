@@ -21,4 +21,5 @@
 @property (nonatomic, strong) id escapeMonitor;
 - (void)closeThen:(void (^)(NSWindow *window, NSString *url))action;
 - (NSString *)siteSettingsURL;
+- (void)finish;   // after the popover closed: monitors, pressed state, the pill's buttons
 @end
