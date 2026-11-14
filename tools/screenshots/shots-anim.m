@@ -2,8 +2,8 @@
 // real views in each state. Between states the frames follow what the code animates, with
 // ArcStyle.h's durations and curves: fades and crossfades are blends of the two states'
 // renders, reload's turn rotates the real icon, and the palette's scale-and-fade (applied
-// to the whole glass panel) is left to frame.swift through panel.json.
-//   <dir>/<name>/000.png …   one panel per frame, translucent like the other renders
+// to the whole panel) is left to frame.swift through panel.json.
+//   <dir>/<name>/000.png …   one panel per frame
 //   <dir>/<name>/panel.json  {"alpha": […], "scale": […]} per frame, when the panel itself animates
 #import "shots.h"
 #import "../../src/features/sidebar/SidebarViews.h"
@@ -66,7 +66,7 @@ static NSImage *snap(NSView *v) {
     [self.alpha addObject:@(a)]; [self.scale addObject:@(sc)];
 }
 
-// `a` blended into `b` by t, exactly (premultiplied sum), so translucent panels stay right.
+// `a` blended into `b` by t, exactly (premultiplied sum), so any translucent parts stay right.
 - (void)blend:(NSImage *)a to:(NSImage *)b t:(double)t alpha:(double)al scale:(double)sc {
     [self frame:a.size alpha:al scale:sc draw:^(NSRect r) {
         [a drawInRect:r fromRect:NSZeroRect operation:NSCompositingOperationPlusLighter fraction:1 - t];
@@ -86,10 +86,10 @@ static NSImage *snap(NSView *v) {
 }
 @end
 
-static NSView *glassCard(CGFloat w, CGFloat h) { return ShotCard(NSMakeSize(w, h), ShotGlassColor(), 0, NO); }
+static NSView *panelCard(CGFloat w, CGFloat h) { return ShotCard(NSMakeSize(w, h), ShotPanelColor(), 0, NO); }
 
 static NSView *pillCard(TweakSidebarURLBar **barOut, ShotPillState s) {
-    NSView *card = glassCard(ShotSidebarWidth, ShotRowHeight + 8);
+    NSView *card = panelCard(ShotSidebarWidth, ShotRowHeight + 8);
     TweakSidebarURLBar *bar = ShotPill(s, 4, nil, YES);
     [card addSubview:bar];
     if (barOut) *barOut = bar;
@@ -129,7 +129,7 @@ static void copyLink(NSString *dir) {
 // Reload: one clockwise turn of the icon (ArcSpinDuration, ease-out), then, while the
 // page loads, the icon crossfades to stop (ArcDurationMedium) and back when it's done.
 static void reloadSpin(NSString *dir) {
-    NSView *card = glassCard(ShotSidebarWidth, ShotRowHeight + 8);
+    NSView *card = panelCard(ShotSidebarWidth, ShotRowHeight + 8);
     TweakNavButtons *nav = ShotAddTopRow(card, 4, ShotTopRowDefault);
     TweakChromeButton *reload = nav.subviews[2];
     NSImage *idle = snap(card);

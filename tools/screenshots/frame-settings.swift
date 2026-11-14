@@ -8,10 +8,8 @@ import ImageIO
 import UniformTypeIdentifiers
 
 /// A scene per file name, so each image gets its own hills but the same look.
-private func scene(for name: String, sunRadius: Double) -> Scene {
-    let seed = name.unicodeScalars.reduce(UInt32(7)) { $0 &* 31 &+ $1.value }
-    let left = seed % 2 == 0
-    return Scene(seed: seed, sun: (left ? 0.14 : 0.86, 0.22, sunRadius))
+private func scene(for name: String) -> Scene {
+    Scene(seed: name.unicodeScalars.reduce(UInt32(7)) { $0 &* 31 &+ $1.value })
 }
 
 private func radius(for name: String) -> CGFloat {
@@ -25,7 +23,7 @@ func frameSettings() {
     for file in stills.sorted() where file.hasSuffix(".png") {
         let name = "settings/" + file, img = load(name), pad: CGFloat = 36
         let size = NSSize(width: img.size.width + pad * 2, height: img.size.height + pad * 2)
-        render(size: size, to: name, scene: scene(for: file, sunRadius: size.height > 300 ? 0.2 : 0.34)) { _ in
+        render(size: size, to: name, scene: scene(for: file)) { _ in
             panel(img, at: NSPoint(x: pad, y: pad + 4), radius: radius(for: file))
         }
     }
@@ -81,7 +79,7 @@ private func writeManifest() {
     try! json.write(to: out.appendingPathComponent("settings/manifest.json"))
 }
 
-/// One animation: every frame on the same glass and backdrop, then an APNG.
+/// One animation: every frame on the same panel and backdrop, then an APNG.
 private func animation(_ name: String) {
     let dir = raw.appendingPathComponent("anim/" + name)
     let files = ((try? FileManager.default.contentsOfDirectory(atPath: dir.path)) ?? []).filter { $0.hasSuffix(".png") }.sorted()
@@ -96,7 +94,7 @@ private func animation(_ name: String) {
     defer { (scale, posterStep) = saved }
     let pad: CGFloat = big ? 40 : 36, size0 = load("anim/\(name)/\(first)").size
     let size = NSSize(width: size0.width + pad * 2, height: size0.height + pad * 2)
-    canvas = Canvas(pixels: Int(size.width * scale), Int(size.height * scale), scene: scene(for: name, sunRadius: big ? 0.22 : 0.34))
+    canvas = Canvas(pixels: Int(size.width * scale), Int(size.height * scale), scene: scene(for: name))
     var frames: [CGImage] = []
     for (i, f) in files.enumerated() {
         let img = load("anim/\(name)/\(f)")

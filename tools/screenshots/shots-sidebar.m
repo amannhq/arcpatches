@@ -17,7 +17,7 @@ static const CGFloat kPillRowH = 40; // TweakSidebarURLBar: the pill plus a litt
 - (void)build;
 @end
 
-NSColor *ShotSidebarColor(void) { return ShotGlassColor(); }
+NSColor *ShotSidebarColor(void) { return ShotPanelColor(); }
 
 static NSView *sidebarCard(CGFloat height) { return ShotCard(NSMakeSize(kWidth, height), ShotSidebarColor(), 0, NO); }
 
@@ -146,7 +146,7 @@ void ShotSidebar(NSString *dir) {
 
     NSArray *names = @[@"pill-rest.png", @"pill-hover.png", @"pill-empty.png"];
     for (ShotPillState s = ShotPillRest; s <= ShotPillEmpty; s++) {
-        NSView *card = ShotCard(NSMakeSize(kWidth, kPillRowH), NSColor.clearColor, 0, NO);   // frame.swift tints the strip
+        NSView *card = ShotCard(NSMakeSize(kWidth, kPillRowH), NSColor.clearColor, 0, NO);   // frame.swift draws the strip's panel
         [card addSubview:pill(s, 0)];
         ShotWritePNG(card, [dir stringByAppendingPathComponent:names[s]]);
     }
@@ -190,7 +190,7 @@ void ShotSiteControls(NSString *dir) {
     NSView *content = c.view;
     content.appearance = [NSAppearance appearanceNamed:NSAppearanceNameDarkAqua];
     [c build];
-    NSView *card = ShotCard(content.frame.size, ShotGlassColor(), ArcRadiusPopover, NO);
+    NSView *card = ShotCard(content.frame.size, ShotPanelColor(), ArcRadiusPopover, NO);
     [card addSubview:content];
     ShotWritePNG(card, [dir stringByAppendingPathComponent:@"site-controls.png"]);
 }

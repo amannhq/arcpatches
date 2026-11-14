@@ -8,8 +8,8 @@ NSImage *ShotLetterIcon(NSString *letter, NSInteger color, CGFloat size);
 NSImage *ShotSiteIcon(NSString *domain, CGFloat size);
 // The host of `url`, without "www.".
 NSString *ShotHost(NSString *url);
-// The translucent dark tint of a glass panel (frame.swift blurs the backdrop behind it).
-NSColor *ShotGlassColor(void);
+// The dark fill of a panel (sidebar, popover, palette) in the renders.
+NSColor *ShotPanelColor(void);
 // Writes `v` (and its subviews) as a 2x PNG.
 void ShotWritePNG(NSView *v, NSString *path);
 // A rounded dark card, like the sidebar or a popover, to hold a render.
@@ -40,7 +40,7 @@ NSView *ShotEditor(void);
 void ShotSettings(NSString *dir);
 // shots-anim.m: 30-fps frame sequences of the microinteractions, in `dir`/<name>/.
 void ShotAnimations(NSString *dir);
-// shots-settings.m: a window crop (sidebar on glass, a generic page), and the full-screen top
+// shots-settings.m: a window crop (sidebar, a generic page), and the full-screen top
 // row with its title strip at `stripOffset` (-ArcFullScreenStripHeight hidden … 0 shown).
 NSView *ShotWindowCrop(CGFloat width, CGFloat height, NSView **sidebarOut, NSView **pageOut);
 NSView *ShotFullScreenRow(BOOL hideButtons, CGFloat stripOffset);

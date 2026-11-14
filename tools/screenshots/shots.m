@@ -1,8 +1,8 @@
 // Dev tool: renders README screenshots of ArcPatches' own UI from the real view code,
 // offscreen, in dark mode at 2x, with demo content: public sites and their favicons, no
 // personal data, no browser running. The site-controls data source is replaced by demo
-// data (shots-data.m), so nothing is read from a browser profile. Panels are drawn with
-// translucent fills; frame.swift puts them on glass over its backdrop.
+// data (shots-data.m), so nothing is read from a browser profile. frame.swift puts the
+// panels, solid as in the app, on its printed backdrop.
 //
 // From the repo root (fetch-icons.sh downloads favicons into build/shot-icons, git-ignored;
 // without them the icons fall back to letter tiles):
@@ -35,7 +35,7 @@ NSImage *ShotLetterIcon(NSString *letter, NSInteger color, CGFloat size) {
     }];
 }
 
-// Mostly-dark favicons (GitHub, Next.js) vanish on dark glass: like a browser, give them a light backing.
+// Mostly-dark favicons (GitHub, Next.js) vanish on dark panels: like a browser, give them a light backing.
 static BOOL isDark(NSImage *img) {
     NSBitmapImageRep *rep = [[NSBitmapImageRep alloc] initWithBitmapDataPlanes:NULL pixelsWide:16 pixelsHigh:16 bitsPerSample:8
         samplesPerPixel:4 hasAlpha:YES isPlanar:NO colorSpaceName:NSCalibratedRGBColorSpace bytesPerRow:0 bitsPerPixel:0];
@@ -77,7 +77,7 @@ NSString *ShotHost(NSString *url) {
     return [host hasPrefix:@"www."] ? [host substringFromIndex:4] : host;
 }
 
-NSColor *ShotGlassColor(void) { return [NSColor colorWithSRGBRed:0.07 green:0.08 blue:0.09 alpha:0.62]; }
+NSColor *ShotPanelColor(void) { return [NSColor colorWithSRGBRed:0.12 green:0.12 blue:0.13 alpha:1]; }
 
 void ShotWritePNG(NSView *v, NSString *path) {
     [v layoutSubtreeIfNeeded];
@@ -138,7 +138,7 @@ static NSView *commandBar(BOOL editor, CGFloat width, NSString *typed, NSString 
     CGFloat listH = n ? 2 * m.listInset + n * m.rowHeight + (n - 1) * m.rowGap : 0;
     CGFloat line = n && !editor ? 0.5 : 0;   // a hairline at 2x
     CGFloat height = m.inputHeight + line + listH, mid = m.inputHeight / 2;   // flipped: the field row on top
-    NSView *panel = ShotCard(NSMakeSize(width, height), ShotGlassColor(), ArcRadiusPopover, NO);
+    NSView *panel = ShotCard(NSMakeSize(width, height), ShotPanelColor(), ArcRadiusPopover, NO);
 
     CGFloat iconX = editor ? ArcSpace3 : ArcPaletteSearchInset;
     NSImageView *fieldIcon = [NSImageView imageViewWithImage:icon ?: ArcSymbol(@"magnifyingglass", ArcPaletteSearchIcon, NSFontWeightRegular, nil)];

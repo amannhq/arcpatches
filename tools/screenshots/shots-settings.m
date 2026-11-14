@@ -1,7 +1,7 @@
 // Before/after stills for the website: one pair per ArcPatches setting that changes what
 // you see, named <key>-on.png / <key>-off.png after the setting's defaults key (without
 // "arcpatches."). Built from the same views and demo data as the README renders; each is
-// a translucent panel that frame.swift puts on glass. Settings that only change Dia's own
+// a panel that frame.swift puts on its printed backdrop. Settings that only change Dia's own
 // UI (its top bar, its editor) or nothing visible (privacy, performance, shortcuts) have
 // no still: this tool renders only ArcPatches' views.
 #import "shots.h"
@@ -11,7 +11,7 @@ static const CGFloat kW = ShotSidebarWidth, kRow = ShotRowHeight;
 
 static void save(NSView *v, NSString *dir, NSString *name) { ShotWritePNG(v, [dir stringByAppendingPathComponent:name]); }
 
-static NSView *glassCard(CGFloat w, CGFloat h) { return ShotCard(NSMakeSize(w, h), ShotGlassColor(), 0, NO); }
+static NSView *panelCard(CGFloat w, CGFloat h) { return ShotCard(NSMakeSize(w, h), ShotPanelColor(), 0, NO); }
 
 // A generic page: a heading and lines of text as soft bars (no real site's content).
 static NSView *page(NSRect frame) {
@@ -32,10 +32,10 @@ static NSView *page(NSRect frame) {
     return p;
 }
 
-// A window crop: the sidebar on glass at the left, a page on the right.
+// A window crop: the sidebar at the left, a page on the right.
 NSView *ShotWindowCrop(CGFloat width, CGFloat height, NSView **sidebarOut, NSView **pageOut) {
     NSView *win = ShotCard(NSMakeSize(width, height), NSColor.clearColor, 0, NO);
-    NSView *side = glassCard(kW, height);
+    NSView *side = panelCard(kW, height);
     [win addSubview:side];
     NSView *pg = page(NSMakeRect(kW, 0, width - kW, height));
     [win addSubview:pg];
@@ -45,13 +45,13 @@ NSView *ShotWindowCrop(CGFloat width, CGFloat height, NSView **sidebarOut, NSVie
 }
 
 static NSView *topRowCard(ShotTopRowOptions o) {
-    NSView *card = glassCard(kW, kRow + 8);
+    NSView *card = panelCard(kW, kRow + 8);
     ShotAddTopRow(card, 4, o);
     return card;
 }
 
 static NSView *pillCard(ShotPillState s, NSString *label, BOOL buttons) {
-    NSView *card = glassCard(kW, kRow + 8);
+    NSView *card = panelCard(kW, kRow + 8);
     [card addSubview:ShotPill(s, 4, label, buttons)];
     return card;
 }
@@ -116,7 +116,7 @@ static NSView *editorAtPill(void) {
 // (`stripOffset` -ArcFullScreenStripHeight is hidden, 0 is shown).
 NSView *ShotFullScreenRow(BOOL hideButtons, CGFloat stripOffset) {
     CGFloat strip = ArcFullScreenStripHeight;
-    NSView *card = glassCard(kW, 2 * kRow + 12);
+    NSView *card = panelCard(kW, 2 * kRow + 12);
     ShotTopRowOptions o = ShotTopRowDefault;
     o.lights = !hideButtons;
     ShotAddTopRow(card, 4, o);
