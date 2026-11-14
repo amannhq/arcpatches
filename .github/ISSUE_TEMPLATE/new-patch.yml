@@ -6,8 +6,9 @@ body:
     id: browsers
     attributes:
       label: Browsers
+      description: The browser ArcPatches patches. Original Arc isn't a target (it's discontinued); see docs/browsers.md for what works where.
       multiple: true
-      options: [Dia, Arc, Other]
+      options: [Dia, Ardia, Chrome, Other]
     validations: { required: true }
   - type: input
     id: name

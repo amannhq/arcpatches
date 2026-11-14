@@ -11,6 +11,8 @@ static BOOL isTrackingParameter(NSString *name) {
 NSString *TweakCleanURL(NSString *url) {
     if (!url.length) return url;
     NSURLComponents *c = [NSURLComponents componentsWithString:url];
+    NSString *scheme = c.scheme.lowercaseString;
+    if (![scheme isEqualToString:@"http"] && ![scheme isEqualToString:@"https"]) return url;   // mailto:, file:, ...: not ours to edit
     NSArray<NSURLQueryItem *> *items = c.percentEncodedQueryItems;
     if (!items.count) return url;
     NSMutableArray<NSURLQueryItem *> *kept = [NSMutableArray arrayWithCapacity:items.count];

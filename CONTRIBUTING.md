@@ -24,8 +24,11 @@ Thanks for helping. This guide covers how the project is organised, how to work 
 | `src/browsers/<name>/` | One descriptor per browser: bundle id, app path, profile folder, and the names of the classes that features hook. |
 | `src/features/<name>/` | One folder per feature (sidebar, command bar, privacy and so on). Each one declares the browsers it supports. |
 | `installer/` | The ArcPatches menu bar app (Swift). It clones, patches, re-signs and restores the browser, and updates itself. |
-| `tools/` | `insert-dylib.c` (adds the weak load command), release signing, and development probes. |
-| `tests/run.sh` | Tests that need no browser. CI runs them on every push and pull request. |
+| `tools/` | `insert-dylib.c` (adds the weak load command), `update-key.swift` (release signing), development probes (`probe-*.m`, `selftest*.m`, `inspect.m`), and `screenshots/` for the README images. |
+| `scripts/` | `check-classes.sh` (are the browser classes `src/` looks up still in an installed build?) and `make-update-key.sh`. |
+| `tests/` | `run.sh` runs the tests that need no browser, including `browsers.m` and `cleanurl.m`. CI runs it on every push and pull request. |
+| `docs/` | `browsers.md` (which feature works in which browser, and why) and `design-language.md`. |
+| `build.sh` | Dev only: builds a separate `~/Applications/Dia Arc.app` (see below). |
 | `.github/` | CI, the release pipeline, and issue and PR templates. |
 
 ## Development setup
@@ -41,15 +44,33 @@ cd arcpatches
 
 ### Trying a change in the browser
 
-Test on a **separate copy** of the browser, never on the one you browse with:
+There are two ways to load your build. Pick one.
+
+**A separate copy (quickest loop).** `./build.sh --launch` copies `/Applications/Dia.app` to a second app, `~/Applications/Dia Arc.app`, injects your freshly built dylib and opens it:
 
 ```bash
-./build.sh --launch    # builds ~/Applications/Dia Arc.app from /Applications/Dia.app
+./build.sh --launch    # builds and opens ~/Applications/Dia Arc.app; ./build.sh alone builds without opening
 ```
 
-Things to know:
-- The copy shares the original's profile, so quit the original first.
-- If `/Applications/Dia.app` is already modified by another tool, restore the stock app first. Stacking two patchers makes results meaningless.
+- **Quit Dia first.** "Dia Arc" is a separate app, but it uses the **same profile** as Dia (Dia names its profile folder after `CFBundleName`, which the copy keeps). Two apps on one profile at once can corrupt it.
+- This is not what users get. The ArcPatches app patches `/Applications/Dia.app` **in place** by default and keeps no second copy. Test the in-place path too (below) before you open a PR that touches the installer.
+- `build.sh` copies whatever is at `/Applications/Dia.app`. If ArcPatches has already patched it in place, the copy starts from that patched build rather than stock Dia (your dylib replaces ArcPatches' one). For a clean baseline, restore the original first (ArcPatches ▸ **Restore**, or `ArcPatches.app/Contents/MacOS/ArcPatches --restore`).
+- `~/Applications/Dia Arc.app` is also where ArcPatches' optional copy mode keeps its copy. If you use copy mode, `build.sh` overwrites it and ArcPatches will rebuild it over your build. Don't mix the two.
+- Delete `~/Applications/Dia Arc.app` when you're done. Its Sparkle updates are off, so it goes stale.
+
+**In place, the way users run it.** Build the ArcPatches app with your dylib inside, then let it patch Dia:
+
+```bash
+./installer/build.sh                 # builds build/ArcPatches.app and installs it to ~/Applications/ArcPatches.app
+# Quit Dia, then click Patch in the ArcPatches window, or:
+~/Applications/ArcPatches.app/Contents/MacOS/ArcPatches --patch
+~/Applications/ArcPatches.app/Contents/MacOS/ArcPatches --status    # what's patched, and from which build
+~/Applications/ArcPatches.app/Contents/MacOS/ArcPatches --restore   # put the original Dia back
+```
+
+`./installer/build.sh` replaces (and quits) an installed `~/Applications/ArcPatches.app`. Use `--no-install` to build only, and `--launch` to also open it.
+
+Either way: if `/Applications/Dia.app` is already modified by another tool, reinstall the stock app first. Stacking two patchers makes results meaningless.
 
 ### Finding what to hook
 

@@ -21,6 +21,7 @@ discontinued.
 | `shortcuts`: tab tidying, profile switching | yes | no (2) | no (6) |
 | `tabs`: sort and group by domain | yes | no (2) | no (5) |
 | `preferences`: ArcPatches pane in Settings | yes | no (1) | no (5) |
+| `toprow`: sidebar toggle, full-screen window buttons, profile name | yes | no (1) | no (5) |
 
 The companion's browser picker lists an installed browser only if at least one feature
 supports it. Today that means Dia and Ardia. Dia remains the default.
@@ -31,7 +32,9 @@ supports it. Today that means Dia and Ardia. Dia remains the default.
    views rendered by React Native macOS. The native side (`ArdiaCore`, `ArdiaShell`)
    only has generic modules such as `CefWebView`, `ChromeUIModule` and
    `WindowManager`. None of Dia's `TabSidebar`, `NavigationBar` or `Preferences`
-   classes exist, and hooking RN views by class name would break on every release.
+   classes exist (`toprow` needs `TabSidebar.SidebarHeaderView` and
+   `ARCUI.WindowStandardButtons`), and hooking RN views by class name would break on
+   every release.
    Ardia already ships an Arc-style sidebar of its own.
 2. **These features need Dia-only native classes or scripting.**
    - `commandbar` uses Dia's `DiaAppleScriptTab` scripting bridge, Dia's window class

@@ -13,6 +13,24 @@ extension PatchEngine {
         if !fm.fileExists(atPath: target.path), fm.fileExists(atPath: aside(target).path) { try? fm.moveItem(at: aside(target), to: target) }
     }
 
+    /// recoverSwap for readers (status, the background check, app launch): only when no
+    /// patch or restore holds the lock, so it never undoes the first move of a swap in progress.
+    /// Otherwise a swap killed midway would leave the browser missing until the next patch.
+    static func recoverSwapIfIdle(_ b: BrowserTarget) {
+        let fm = FileManager.default
+        var targets = [b.source]
+        if b.mode == .copy { targets.append(b.copyDestination) }
+        let stranded = targets.filter { !fm.fileExists(atPath: $0.path) && fm.fileExists(atPath: aside($0).path) }
+        guard !stranded.isEmpty else { return }
+        try? fm.createDirectory(at: b.supportDir, withIntermediateDirectories: true)
+        let lock = open(b.supportDir.appendingPathComponent("patch.lock").path, O_CREAT | O_RDWR, 0o644)
+        guard lock >= 0 else { return }
+        defer { close(lock) }
+        guard flock(lock, LOCK_EX | LOCK_NB) == 0 else { return }   // a patch is running: it recovers itself
+        defer { flock(lock, LOCK_UN) }
+        stranded.forEach(recoverSwap(at:))
+    }
+
     /// Replaces `target` with `staging` (same folder): old one aside, new one in, old one removed.
     static func swapIn(_ staging: URL, at target: URL, browser name: String) throws {
         let fm = FileManager.default

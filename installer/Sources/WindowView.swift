@@ -210,6 +210,7 @@ struct ArcPatchesWindowView: View {
                 Text("Unofficial · not affiliated with The Browser Company").foregroundStyle(.tertiary)
             }
             Spacer()
+            Button("Uninstall…") { c.confirmUninstall() }.disabled(c.busy != nil)
             Button("Quit ArcPatches") { NSApp.terminate(nil) }
         }
         .controlSize(.small)

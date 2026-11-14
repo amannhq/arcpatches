@@ -20,7 +20,7 @@ struct BrowserTarget: Equatable, Sendable {
     static let dia = BrowserTarget(
         id: "dia", name: "Dia", bundleId: "company.thebrowser.dia", defaultPath: "/Applications/Dia.app",
         teamId: "S6N382Y83G", signer: "The Browser Company",
-        features: ["commandbar", "performance", "preferences", "privacy", "shortcuts", "sidebar", "tabs"],
+        features: ["commandbar", "performance", "preferences", "privacy", "shortcuts", "sidebar", "tabs", "toprow"],
         caveat: nil)
     static let ardia = BrowserTarget(
         id: "ardia", name: "Ardia", bundleId: "com.ardia.browser", defaultPath: "/Applications/Ardia.app",
