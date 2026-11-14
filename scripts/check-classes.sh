@@ -102,6 +102,7 @@ while read -r name value; do
         *BrowserID|*BundleID|*DisplayName|*AppPath|*ProfileFolder) continue ;;
         *Suffix) [ -n "$(value_of "${name%Suffix}Prefix")" ] && continue ;;   # checked with its prefix
     esac
+    case "$value" in *://*) continue ;; esac   # URLs (e.g. chrome:// pages) aren't classes
     status=MISSING
     case "$name" in
         *Prefix)

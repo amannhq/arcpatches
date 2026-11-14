@@ -21,4 +21,4 @@ Read `README.md` first. The layout is `src/core`, `src/browsers/<id>`, `src/feat
 - `arcpatches-build-test`: safe build and test commands, and what never to run.
 - `dia-class-check`: `scripts/check-classes.sh <app>`, which checks the classes `src/` relies on against a browser's binaries.
 - `arcpatches-new-feature`: checklist for a new `src/features/<name>/`.
-- `arcpatches-release`: `VERSION`, `CHANGELOG.md`, tags, the `ARCPATCHES_UPDATE_PRIVATE_KEY` secret, and the private-repo self-update caveat.
+- `arcpatches-release`: `VERSION`, `CHANGELOG.md`, tags, the `ARCPATCHES_UPDATE_PRIVATE_KEY` secret, and why self-update needs a public repo.

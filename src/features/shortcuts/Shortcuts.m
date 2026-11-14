@@ -126,9 +126,10 @@ NSEventModifierFlags TweakProfileNumberMods(void) {
 }
 
 BOOL TweakShortcutsHandle(NSEvent *e) {
-    if (gRecording || ![TweakSettings boolForKey:TweakKeyExtraShortcuts] || e.isARepeat) return NO;
-    NSWindow *w = browserWindow();
+    NSWindow *w = gRecording ? nil : browserWindow();
     if (!w) return NO;
+    if (TweakArcShortcutsHandle(e, w)) return YES;   // ArcShortcuts.m, on by default
+    if (![TweakSettings boolForKey:TweakKeyExtraShortcuts] || e.isARepeat) return NO;
     NSEventModifierFlags mods = e.modifierFlags & kMods;
     for (NSDictionary *a in TweakShortcutActions()) {
         NSDictionary *s = TweakShortcutFor(a[@"id"]);
@@ -233,4 +234,4 @@ static NSString *keyName(NSEvent *e) {
 @end
 
 // No hooks of its own: the entry point's key monitor calls TweakShortcutsHandle.
-const TweakFeature TweakFeatureShortcuts = {"shortcuts", {TWEAK_BROWSER_DIA}, NULL, NULL};
+const TweakFeature TweakFeatureShortcuts = {"shortcuts", {TWEAK_BROWSER_DIA}, NULL, TweakArcShortcutsInstall};

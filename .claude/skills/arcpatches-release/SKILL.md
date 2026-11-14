@@ -32,11 +32,11 @@ The tag must equal `v$(cat VERSION)`, or the workflow stops.
 - Never print, commit or paste the private key. Rotating it means older installs reject new updates until they are updated by hand.
 - Optional, for a Developer ID signed and notarized build: `APPLE_CERTIFICATE_P12`, `APPLE_CERTIFICATE_PASSWORD`, `APPLE_ID`, `APPLE_APP_PASSWORD`, `APPLE_TEAM_ID`.
 
-## Self-update caveat: private repos
+## Self-update and repo visibility
 
 - `installer/Sources/SelfUpdater.swift` asks `https://api.github.com/repos/<ArcPatchesRepo>/releases/latest` with no auth token. The repo comes from `ARCPATCHES_REPO` at build time and defaults to `amannhq/arcpatches`.
 - For a **private** repo, GitHub answers **404** to unauthenticated requests, and the updater treats 404 as "no releases yet". Installed copies therefore silently report themselves up to date and never update. The asset downloads would fail the same way.
-- Self-update only works once the repo, or a separate public releases repo set through `ARCPATCHES_REPO`, is public. Shipping a token inside the app is not an acceptable fix.
+- `amannhq/arcpatches` is public (since 2026-11-14), so self-update works. If the repo ever goes private again, publish releases from a separate public repo set through `ARCPATCHES_REPO`. Shipping a token inside the app is not an acceptable fix.
 
 ## Also check
 

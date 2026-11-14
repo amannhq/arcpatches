@@ -107,6 +107,12 @@ BOOL TweakShortcutsHandle(NSEvent *keyDown);
 - (void)sync;
 @end
 
+// Arc shortcuts (ArcShortcuts.m): ⌘⇧C, ⌘⇧⌥C, ⌘S. On by default, outside the extra-shortcuts
+// switch; each is skipped while Dia's menu gives its keys to another command.
+NSArray<NSDictionary *> *TweakArcShortcutSettings(void);   // Settings rows: {key, title, detail}
+BOOL TweakArcShortcutsHandle(NSEvent *keyDown, NSWindow *browserWindow);
+void TweakArcShortcutsInstall(void);
+
 // Tab tidying (Tabs.m), for the window's active profile.
 void TweakTabsInstall(void);   // call before main()
 BOOL TweakTabsAvailable(void);
