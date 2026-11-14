@@ -1,17 +1,13 @@
-import { Bot } from "lucide-react"
-import { CodeBlock } from "@/components/ui/code-block"
-import { Tabs } from "@/components/ui/tabs"
-import { CopyButton } from "@/components/site/copy-button"
+import { Command, CopyLink } from "@/components/site/command"
 import { InlineMd } from "@/components/site/inline-md"
 import { Section } from "@/components/site/section"
-import { GROUPS, SETTINGS, defaultLabel } from "@/data/settings"
-import { BASE, INSTALL_CMD, REPO_URL, agentPrompt, cliFlags, type Table } from "@/lib/content"
+import { AGENT_DOC_URL, BASE, REPO_URL, agentPrompt, cliFlags, type Table } from "@/lib/content"
 
-function DocTable({ table, caption }: { table: Table; caption: string }) {
+export function DocTable({ table, caption }: { table: Table; caption: string }) {
   return (
     <div className="table-scroll" role="region" aria-label={caption} tabIndex={0}>
       <table>
-        <caption>{caption}</caption>
+        <caption className="sr-only">{caption}</caption>
         <thead>
           <tr>
             {table.head.map((h) => (
@@ -55,98 +51,49 @@ defaults delete company.thebrowser.dia arcpatches.blockTelemetry   # back to def
 
 export function Cli() {
   const docs = `${REPO_URL}/blob/main/docs`
-  const items = [
-    {
-      value: "install",
-      label: "Install",
-      body: (
-        <div className="tab-body">
-          <CodeBlock code={INSTALL_CMD} language="sh" label="Terminal" />
-          <p>
-            Checks your Mac, downloads the latest release, verifies its SHA-256 checksum and code signature, and installs
-            ArcPatches.app. Files fetched with curl aren&rsquo;t quarantined, so macOS doesn&rsquo;t ask you to approve
-            the app. <a href={`${REPO_URL}/blob/main/install.sh`}>Read the script</a>.
-          </p>
-        </div>
-      ),
-    },
-    {
-      value: "commands",
-      label: "Commands",
-      body: (
-        <div className="tab-body">
-          <CodeBlock code={BINARY} language="sh" label="The app is also a command line tool" />
-          <DocTable table={cliFlags()} caption="ArcPatches flags" />
-        </div>
-      ),
-    },
-    {
-      value: "settings",
-      label: "Settings",
-      body: (
-        <div className="tab-body">
-          <CodeBlock code={SETTINGS_EXAMPLE} language="sh" label="Terminal" />
-          <p>
-            Every setting with a picture of what it changes is on the <a href={`${BASE}/settings/`}>settings page</a>.
-          </p>
-          {GROUPS.map((g) => (
-            <DocTable
-              key={g.name}
-              caption={g.name}
-              table={{
-                title: g.name,
-                head: ["Key", "Type", "Default", "Setting"],
-                rows: SETTINGS.filter((s) => s.group === g.name).map((s) => [
-                  `\`${s.key}\``,
-                  s.type,
-                  defaultLabel(s),
-                  s.title,
-                ]),
-              }}
-            />
-          ))}
-        </div>
-      ),
-    },
-    {
-      value: "agent",
-      label: "AI agent",
-      body: (
-        <div className="tab-body">
-          <p>
-            One prompt that has Claude Code, Cursor or Codex check your Mac, install ArcPatches, patch Dia and apply
-            your settings. It asks before it quits Dia or removes anything, and never uses sudo.
-          </p>
-          <div className="cta-row">
-            <CopyButton
-              tone="primary"
-              text={agentPrompt()}
-              label="Copy agent prompt"
-              done="Prompt copied"
-              description="Paste it into your coding agent."
-              icon={<Bot aria-hidden size={16} />}
-            />
-            <a className="pill-link" href={`${docs}/agent-install.md`}>
-              Read the prompt
-            </a>
-          </div>
-        </div>
-      ),
-    },
-  ]
   return (
     <Section
       id="cli"
-      eyebrow="Command line"
-      title="Everything, from Terminal."
+      label="Command line"
+      title="Everything works from Terminal."
       intro={
         <>
-          The full reference is in <a href={`${docs}/cli.md`}>docs/cli.md</a>; the tables below are built from it.
+          The full reference is <a href={`${docs}/cli.md`}>docs/cli.md</a>. The flags table below is built from it.
         </>
       }
     >
-      <div className="glass cli">
-        <Tabs items={items} label="Command line topics" />
+      <div className="cli">
+        <div className="cli-block">
+          <h3>The install script</h3>
+          <p>
+            It checks your Mac, downloads the latest release, verifies its SHA-256 checksum and code signature, and
+            installs ArcPatches.app. Files fetched with curl aren&rsquo;t quarantined, so macOS doesn&rsquo;t ask you to
+            approve the app. <a href={`${REPO_URL}/blob/main/install.sh`}>Read the script</a>.
+          </p>
+        </div>
+        <div className="cli-block">
+          <h3>The app is also a command line tool</h3>
+          <Command code={BINARY} label="Terminal" />
+          <DocTable table={cliFlags()} caption="ArcPatches flags" />
+        </div>
+        <div className="cli-block">
+          <h3>Settings</h3>
+          <Command code={SETTINGS_EXAMPLE} label="Terminal" />
+          <p>
+            Every key, with pictures of what it changes, is on the <a href={`${BASE}/settings/`}>settings page</a>.
+          </p>
+        </div>
+        <div className="cli-block">
+          <h3>With a coding agent</h3>
+          <p>
+            One prompt has Claude Code, Cursor or Codex check your Mac, install ArcPatches, patch Dia and apply your
+            settings. It asks before it quits Dia or removes anything, and never uses sudo.
+          </p>
+          <p className="hero-links">
+            <CopyLink text={agentPrompt()} label="Copy the prompt" done="Prompt copied" />
+            <a href={AGENT_DOC_URL}>Read it first</a>
+          </p>
+        </div>
       </div>
     </Section>
   )

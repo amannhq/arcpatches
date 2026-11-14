@@ -1,33 +1,34 @@
-import { Badge } from "@/components/ui/badge"
 import { Section } from "@/components/site/section"
 import { REPO_URL } from "@/lib/content"
 
-const BROWSERS: { name: string; tone: "success" | "warning" | "danger" | "neutral"; status: string; note: string }[] = [
-  { name: "Dia", tone: "success", status: "Supported", note: "Every feature. Tested on 1.57.x." },
+type Status = "yes" | "partial" | "no" | "na"
+
+const BROWSERS: { name: string; status: Status; label: string; note: string }[] = [
+  { name: "Dia", status: "yes", label: "Supported", note: "Every feature. Tested on 1.57.x." },
   {
     name: "Ardia",
-    tone: "warning",
-    status: "Partial",
+    status: "partial",
+    label: "Partial",
     note: "Only the Chromium performance switches. Its UI is React Native, so it can't be patched like Dia's.",
   },
-  { name: "Chrome", tone: "danger", status: "Not supported", note: "Its UI is drawn by Chromium's own C++ views." },
-  { name: "Arc", tone: "neutral", status: "Not a target", note: "Arc already is Arc, and it's being retired." },
+  { name: "Chrome", status: "no", label: "Not supported", note: "Its UI is drawn by Chromium's own C++ views." },
+  { name: "Arc", status: "na", label: "Not a target", note: "Arc already has these features." },
 ]
 
 export function Support() {
   return (
     <Section
       id="support"
-      eyebrow="Browser support"
+      label="Browsers"
       title="Made for Dia."
       intro={
         <>
-          Needs a Mac with Apple silicon, macOS 14 or later, and the browser in /Applications. Per-feature details are in{" "}
+          Needs a Mac with Apple silicon, macOS 14 or later, and the browser in /Applications. Details per feature are in{" "}
           <a href={`${REPO_URL}/blob/main/docs/browsers.md`}>docs/browsers.md</a>.
         </>
       }
     >
-      <div className="glass table-scroll" role="region" aria-label="Browser support" tabIndex={0}>
+      <div className="table-scroll" role="region" aria-label="Browser support" tabIndex={0}>
         <table>
           <caption className="sr-only">Browser support</caption>
           <thead>
@@ -42,7 +43,9 @@ export function Support() {
               <tr key={b.name}>
                 <th scope="row">{b.name}</th>
                 <td>
-                  <Badge tone={b.tone}>{b.status}</Badge>
+                  <span className="status" data-status={b.status}>
+                    {b.label}
+                  </span>
                 </td>
                 <td>{b.note}</td>
               </tr>

@@ -5,7 +5,7 @@ import { installHardware } from "@/lib/install"
 import "@/components/ui/hardware/skin.css"
 
 // The root of the hardware skin. Everything inside it is styled by the skin,
-// and the page-wide behaviors it relies on (haptics, sounds, keyboard-only
+// and the page-wide behaviors it relies on (haptics, keyboard-only
 // focus rings, the block caret) are installed once.
 //
 // The key color is an OKLCH lightness, chroma and hue, as `--theme-l`,

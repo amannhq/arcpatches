@@ -1,120 +1,84 @@
-/* ── Kit parts on a dark page ────────────────────────────────────────── */
+/* ── Kit controls, printed flat ──────────────────────────────────────── */
 
-/* Light kit surfaces (the segmented well, its chosen segment) keep the kit's dark ink. */
-[data-skin="hardware"] :is([data-kit="segmented"], [data-kit="field"]) {
-  --ink: #1d1d1c;
-  --dim: #5f5e5a;
+/* The segmented control: an ink-ruled strip; the chosen segment is solid ink. */
+[data-skin="hardware"] [data-kit="field"]:not(#_):not(#_):not(#_) {
+  --ink: #141414;
+  --dim: var(--ink-3);
+  display: grid;
+  gap: 6px;
 }
 
-[data-skin="hardware"] [data-kit="field"] > [data-kit="label"]:not(#_):not(#_):not(#_) {
-  color: var(--bone-3);
+[data-skin="hardware"] [data-kit="field"] > [data-kit="label"]:not(#_):not(#_):not(#_):not(#_) {
+  font: 500 12px/1.3 var(--font-geist-mono), ui-monospace, monospace;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-3);
 }
 
-/* Code blocks as glass: a translucent screen with a hairline, inside a glass panel. */
-[data-skin="hardware"] [data-kit="code-block"] [data-kit="display-bezel"]:not(#_):not(#_):not(#_) {
-  padding: 6px;
-  background: rgb(4 12 15 / 0.55);
-  box-shadow:
-    inset 0 0 0 1px var(--hair),
-    inset 0 1px 0 rgb(255 255 255 / 0.06);
-}
-
-[data-skin="hardware"] [data-kit="code-block"] [data-kit="display-screen"]:not(#_):not(#_) {
-  background: transparent;
+[data-skin="hardware"] [data-kit="segmented"]:not(#_):not(#_):not(#_):not(#_) {
+  display: flex;
+  flex-wrap: wrap;
+  width: fit-content;
+  max-width: 100%;
+  /* Hairline gaps over an ink ground rule every cell, even when a row wraps. */
+  gap: 1px;
+  padding: 0;
+  border: 1px solid var(--ink);
+  border-radius: 0;
+  background: var(--ink);
   box-shadow: none;
 
-  &::after,
-  &::before {
+  &::before,
+  &::after {
     display: none;
   }
 }
 
-[data-skin="hardware"] [data-kit="code-block"] [data-kit="code"]:not(#_):not(#_):not(#_) {
-  background: rgb(0 0 0 / 0.25);
-  text-shadow: none;
+/* No sliding pill: the chosen segment is simply printed solid. */
+[data-skin="hardware"] [data-kit="segmented-indicator"]:not(#_):not(#_):not(#_):not(#_) {
+  display: none;
 }
 
-[data-skin="hardware"] [data-kit="display-bezel"]:not(#_):not(#_) {
-  box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 0.12),
-    0 0 0 1px rgb(0 0 0 / 0.6),
-    0 24px 40px -18px rgb(0 0 0 / 0.75);
-}
-
-[data-skin="hardware"] [data-kit="display-screen"]:not(#_) > img {
-  object-fit: contain;
-  filter: none;
-}
-
-[data-skin="hardware"] :is([data-kit="code-label"], [data-kit="label"]):not(#_):not(#_) {
-  font: 500 12px/1.2 var(--mono);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--bone-3);
-}
-
-[data-skin="hardware"] [data-kit="code"]:not(#_):not(#_) {
-  font-size: 13px;
-  text-transform: none;
-}
-
-[data-skin="hardware"] [data-kit="badge"]:not(#_):not(#_) {
-  padding: 3px 10px;
-  border-radius: 999px;
-  background: rgb(255 255 255 / 0.08);
-  box-shadow: inset 0 0 0 1px var(--hair);
-  color: var(--bone);
-  font: 500 12px/1.4 var(--sans);
-  text-transform: none;
-  letter-spacing: 0.01em;
-}
-
-[data-skin="hardware"] [data-kit="button"]:not(#_):not(#_) {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 44px;
-  padding: 0 18px;
-  font: 600 15px/1 var(--sans);
-  text-transform: none;
+[data-skin="hardware"] [data-kit="segment"]:not(#_):not(#_):not(#_):not(#_) {
+  flex: 1 1 auto;
+  min-height: 36px;
+  height: auto;
+  padding: 6px 12px;
+  border-radius: 0 !important;
+  background: var(--paper);
+  box-shadow: none;
+  translate: none;
+  color: var(--ink);
+  font: 500 13px/1.2 var(--font-geist-sans), system-ui, sans-serif;
   letter-spacing: 0;
-  color: var(--ink-black);
-}
+  text-transform: none;
+  white-space: nowrap;
 
-[data-skin="hardware"] [data-kit="button"][data-tone="primary"]:not(#_):not(#_) {
-  color: var(--ink-black);
-}
+  &[data-checked] {
+    color: #f4efe6;
+    background: var(--ink);
+  }
 
-/* Tabs: the kit's mechanical keys, with legends sized to read. */
-[data-skin="hardware"] [data-kit="tabs-list"]:not(#_):not(#_)::before {
-  box-shadow: inset 0 2px 3px rgb(0 0 0 / 0.45);
-}
-
-[data-skin="hardware"] [data-kit="tab"]:not(#_):not(#_):not(#_) {
-  font: 600 12px/1 var(--sans);
-  letter-spacing: 0.04em;
-  color: var(--bone-3);
-  --legend: 12px;
-
-  &[data-selected],
-  &[aria-selected="true"] {
-    color: var(--bone);
+  &::before,
+  &::after {
+    display: none;
   }
 }
 
-.cli {
-  padding: 22px 18px;
+[data-skin="hardware"] [data-kit="segment"] > [data-kit="led"]:not(#_):not(#_):not(#_):not(#_) {
+  display: none;
 }
 
-@media (min-width: 640px) {
-  .cli {
-    padding: 28px;
-  }
+[data-skin="hardware"] [data-kit="segment"]:focus-visible:not(#_):not(#_):not(#_):not(#_) {
+  outline: 2px solid var(--teal);
+  outline-offset: 2px;
+  z-index: 2;
 }
 
-.tab-body {
-  display: grid;
-  gap: 18px;
-  padding-top: 8px;
-  color: var(--bone-2);
+/* Toasts, if anything raises one: a plain ink slip. */
+[data-skin="hardware"] [data-kit="toast"]:not(#_):not(#_):not(#_) {
+  border-radius: 0;
+  background: var(--ink);
+  color: var(--paper);
+  box-shadow: none;
 }

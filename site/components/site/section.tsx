@@ -1,32 +1,27 @@
 import * as React from "react"
-import { RisoArt, type RisoVariant } from "@/components/site/riso-art"
 
-// A page section: an optional quiet art layer behind it, a heading block, then content.
+// A page section on the paper (or the navy night stock): a small mono label over a rule,
+// a heading, an optional line of intro, then content.
 export function Section({
   id,
-  eyebrow,
+  label,
   title,
   intro,
-  art,
+  tone,
   children,
 }: {
   id: string
-  eyebrow: string
+  label: string
   title: string
   intro?: React.ReactNode
-  art?: RisoVariant
+  tone?: "night"
   children: React.ReactNode
 }) {
   return (
-    <section id={id} className="section" aria-labelledby={`${id}-title`} data-art={art}>
-      {art && (
-        <div className="section-art" aria-hidden>
-          <RisoArt variant={art} />
-        </div>
-      )}
+    <section id={id} className="section" data-tone={tone} aria-labelledby={`${id}-title`}>
       <div className="wrap">
         <header className="section-head">
-          <p className="eyebrow">{eyebrow}</p>
+          <p className="label">{label}</p>
           <h2 id={`${id}-title`}>{title}</h2>
           {intro && <p className="lede">{intro}</p>}
         </header>

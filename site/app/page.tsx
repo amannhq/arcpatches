@@ -1,5 +1,3 @@
-import { ArrowRight } from "lucide-react"
-import { Backdrop } from "@/components/site/backdrop"
 import { Cli } from "@/components/site/cli"
 import { Faq } from "@/components/site/faq"
 import { Features } from "@/components/site/features"
@@ -10,35 +8,41 @@ import { SiteNav } from "@/components/site/nav"
 import { Section } from "@/components/site/section"
 import { Support } from "@/components/site/support"
 import { GROUPS, SETTINGS } from "@/data/settings"
-import { BASE } from "@/lib/content"
+import { BASE, art } from "@/lib/content"
 
 export default function Home() {
+  // An optional second illustration (site/art/hero-2.webp); nothing is drawn without it.
+  const band = art("hero-2")
   return (
     <>
-      <Backdrop />
       <SiteNav current="home" />
       <main id="main">
         <Hero />
         <Features />
+        {band && (
+          <div className="art-band" aria-hidden>
+            {/* eslint-disable-next-line @next/next/no-img-element -- static export */}
+            <img src={band} alt="" loading="lazy" draggable={false} />
+          </div>
+        )}
         <How />
         <Section
           id="settings-teaser"
-          eyebrow="Settings"
-          title="Make it yours."
-          intro={`${SETTINGS.length} settings in ${GROUPS.length} groups, each shown on and off with the command that sets it.`}
+          label="Settings"
+          title="Set it up your way."
+          intro={`${SETTINGS.length} settings in ${GROUPS.length} groups. Each one is shown on and off, with the command that sets it.`}
         >
-          <div className="glass teaser">
-            <ul>
-              {GROUPS.map((g) => (
-                <li key={g.name}>
-                  <strong>{g.name}</strong> <span>{g.blurb}</span>
-                </li>
-              ))}
-            </ul>
-            <a className="pill-link strong" href={`${BASE}/settings/`}>
-              See every setting <ArrowRight aria-hidden size={16} />
-            </a>
-          </div>
+          <dl className="ruled-grid">
+            {GROUPS.map((g) => (
+              <div key={g.name}>
+                <dt>{g.name}</dt>
+                <dd>{g.blurb}</dd>
+              </div>
+            ))}
+          </dl>
+          <p className="more">
+            <a href={`${BASE}/settings/`}>See every setting →</a>
+          </p>
         </Section>
         <Cli />
         <Support />
