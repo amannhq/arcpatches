@@ -88,13 +88,20 @@ Chrome would also need two installer changes before it could be patched:
   or `defaults write com.ardia.browser arcpatches.rendererProcessLimit -int 4`.
   Then relaunch Ardia Arc.
 - **Keychain.** The same no-Team-ID check that enables the switches also makes Ardia
-  add `--use-mock-keychain`. Ardia Arc therefore cannot read cookies or passwords the
-  original Ardia encrypted with the real keychain. Expect to sign in to sites again,
-  and keep saved passwords in the original Ardia. This happens to any re-signed Ardia,
-  whether or not a switch is on.
-- **Dropped entitlements.** Re-signing drops Ardia's restricted entitlements (keychain
-  groups, Apple Events automation). Importing from other browsers through Apple Events
-  may stop working in Ardia Arc.
+  add `--use-mock-keychain`. This happens to any re-signed Ardia, whether or not a
+  switch is on. Both apps share one profile, but each encrypts it with a different key:
+  - Ardia Arc can't decrypt the cookies and passwords the original Ardia encrypted with
+    the real keychain, so sites sign you out.
+  - The same happens the other way: after **Restore**, the original Ardia can't decrypt
+    what Ardia Arc wrote.
+  - Ardia's Chromium 155 includes `LoginDatabase::DeleteUndecryptableLogins` and the
+    `password_manager.deleteting_undecryptable_passwords_enabled` pref. Saved passwords
+    it can't decrypt may therefore be **deleted** from the shared profile, not just
+    hidden. Export them first if they aren't synced elsewhere.
+- **Dropped entitlements.** Re-signing drops Ardia's restricted entitlements: keychain
+  groups, Apple Events automation, and calendars. Two things may stop working in Ardia
+  Arc: importing from other browsers through Apple Events, and the calendar module
+  (`ArdiaShell.CalendarModule`).
 
 ## Where things live
 

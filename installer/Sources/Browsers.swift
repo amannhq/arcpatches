@@ -27,8 +27,9 @@ struct BrowserTarget: Equatable, Sendable {
         teamId: "U5L5T3NGVV", signer: "its developer",
         features: ["performance"],
         caveat: "Only the Chromium switches (background networking, renderer limit) apply; Ardia already has its own sidebar "
-            + "and command bar. Ardia treats an app not signed by its developer as a dev build and uses a mock keychain, "
-            + "so sites may sign you out and saved passwords stay in the original Ardia.")
+            + "and command bar. Re-signed, Ardia acts as a dev build with a mock keychain: sites sign you out (in Ardia Arc, "
+            + "and again in the original after a restore), and Chromium may delete saved passwords it can't decrypt. "
+            + "Calendar access and Apple Events import may stop working.")
     /// Recognised, but nothing in arcpatches works in Chrome yet (docs/browsers.md), so it is never offered.
     static let chrome = BrowserTarget(
         id: "chrome", name: "Chrome", bundleId: "com.google.Chrome", defaultPath: "/Applications/Google Chrome.app",
