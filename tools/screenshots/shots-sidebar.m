@@ -33,11 +33,11 @@ static void addTopRow(NSView *parent, CGFloat y) {
         [parent addSubview:dot];
     }
     NSButton *toggle = [NSClassFromString(@"TweakSidebarToggleButton") toggle];
-    toggle.frame = NSMakeRect(70 + 1, y + (kRowH - TweakChromeTopRowSize) / 2, TweakChromeTopRowSize, TweakChromeTopRowSize);
+    toggle.frame = NSMakeRect(70 + 1, y + (kRowH - ArcTopRowButton) / 2, ArcTopRowButton, ArcTopRowButton);
     [parent addSubview:toggle];
 
-    CGFloat w = 3 * TweakChromeTopRowSize;   // placed as Sidebar.m does: trailing, 8 from the edge
-    TweakNavButtons *nav = [[TweakNavButtons alloc] initWithFrame:NSMakeRect(kWidth - w - 8, y + (kRowH - TweakChromeTopRowSize) / 2, w, TweakChromeTopRowSize)];
+    CGFloat w = 3 * ArcTopRowButton;   // placed as Sidebar.m does: trailing, on the pill's edge
+    TweakNavButtons *nav = [[TweakNavButtons alloc] initWithFrame:NSMakeRect(kWidth - w - ArcSidebarInset, y + (kRowH - ArcTopRowButton) / 2, w, ArcTopRowButton)];
     [parent addSubview:nav];
     [nav layoutSubtreeIfNeeded];
     ((NSButton *)nav.subviews[1]).enabled = NO;   // no forward history: dimmed, still in place
