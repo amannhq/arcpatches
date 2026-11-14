@@ -10,6 +10,7 @@ on:
       - "site/**"
       - "docs/**"
       - "VERSION"
+      - "install.sh"   # the site serves a copy: redeploy when it changes
       - "src/**/*.m"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
