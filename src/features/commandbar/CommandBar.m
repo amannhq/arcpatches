@@ -107,10 +107,12 @@
             NSForegroundColorAttributeName: NSColor.labelColor,
         };
     [self.field.currentEditor selectAll:nil];
-    [self animateIn];
+    [self updateFieldIcon];
     // ⌘L starts with the URL selected and suggestions for the page you're on, like Arc.
+    // Both list their first rows synchronously, so the panel appears at its height.
     if (mode == TweakCommandBarNewTab || !initial.length) [self runQuery];
     else [self showSuggestionsForCurrentPage];
+    [self animateIn];
 }
 
 - (void)close {

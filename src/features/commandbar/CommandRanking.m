@@ -179,6 +179,8 @@ static BOOL onSite(NSString *url, NSString *site) {
         [items addObject:root];
     }
 
+    done([items copy]);   // shown at once; same-site rows follow
+
     // Then other open tabs and history on the same site, most visited first.
     NSArray<TweakItem *> *tabs = _tabs;
     dispatch_async(_queue, ^{

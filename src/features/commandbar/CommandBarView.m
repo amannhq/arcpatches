@@ -10,7 +10,12 @@
 - (BOOL)isFlipped { return YES; }
 - (BOOL)acceptsFirstMouse:(NSEvent *)e { return YES; }
 
-- (void)setItems:(NSArray<TweakItem *> *)items { _items = [items copy]; _selected = items.count ? 0 : -1; self.needsDisplay = YES; }
+- (void)setItems:(NSArray<TweakItem *> *)items {
+    _items = [items copy];
+    _selected = items.count ? 0 : -1;
+    _lastMouse = NSEvent.mouseLocation;   // new rows under a still pointer don't take the highlight
+    self.needsDisplay = YES;
+}
 - (void)setSelected:(NSInteger)s { _selected = s; self.needsDisplay = YES; }
 - (void)setMetrics:(TweakBarMetrics)m { _metrics = m; self.needsDisplay = YES; }
 
@@ -92,7 +97,7 @@ static BOOL showsDetail(TweakItemKind k) {
         }
         NSString *title = it.title ?: @"";
         NSSize ts = [title sizeWithAttributes:ta];
-        CGFloat titleW = MAX(0, MIN(ts.width, (maxX - x) * (showsDetail(it.kind) ? 0.6 : 1)));
+        CGFloat titleW = MAX(0, MIN(ts.width, (maxX - x) * (showsDetail(it.kind) ? ArcRowTitleShare : 1)));
         [title drawInRect:NSMakeRect(x, NSMidY(row) - ts.height / 2, titleW, ts.height) withAttributes:ta];
         NSString *detail = nil;
         if (it.kind == TweakItemHistory || it.kind == TweakItemBookmark || it.kind == TweakItemPage) detail = [self prettyURL:it.url];

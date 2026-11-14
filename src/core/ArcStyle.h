@@ -44,6 +44,7 @@ static const CGFloat ArcPaletteSearchIcon = 15;  // magnifying glass point size
 static const CGFloat ArcPaletteSearchInset = 18; // its leading inset
 static const CGFloat ArcPaletteRowHeight = 34;
 static const CGFloat ArcPaletteRowGap = 6;
+static const CGFloat ArcRowTitleShare = 0.6;     // most a title takes when a "— detail" follows
 static const CGFloat ArcPaletteAppearScale = 0.98;   // grows from this when it appears
 static const CGFloat ArcEditorWidthRatio = 1.55; // editor width per point of sidebar width
 static const CGFloat ArcEditorMinWidth = 300;

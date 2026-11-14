@@ -10,6 +10,8 @@ TweakBarMetrics TweakBarMetricsFor(BOOL editor) {
     return (TweakBarMetrics){ArcPaletteSearchHeight, ArcPaletteRowHeight, ArcPaletteRowGap, ArcSpace2, NO};
 }
 
+static void fade(NSWindow *w, CGFloat alpha, NSTimeInterval duration, CAMediaTimingFunction *timing, void (^done)(void));
+
 #pragma mark - Web content
 
 static void collectPanes(NSView *v, NSMutableArray<NSView *> *out) {
@@ -29,7 +31,10 @@ NSRect TweakCommandBarContentRect(NSWindow *window) {
         NSRect pr = [p convertRect:p.bounds toView:nil];
         r = NSIsEmptyRect(r) ? pr : NSUnionRect(r, pr);
     }
-    if (NSIsEmptyRect(r)) r = [window.contentView convertRect:window.contentView.bounds toView:nil];
+    // Panes parked off-window (other spaces) mustn't pull the centre away.
+    NSRect whole = [window.contentView convertRect:window.contentView.bounds toView:nil];
+    r = NSIntersectionRect(r, whole);
+    if (NSIsEmptyRect(r)) r = whole;
     return [window convertRectToScreen:r];
 }
 
@@ -60,7 +65,8 @@ NSRect TweakCommandBarContentRect(NSWindow *window) {
         // About 1.55× the sidebar (the pill plus its inset on each side), never past the window.
         CGFloat sidebar = self.pinnedToPill ? NSWidth(a) + 2 * ArcSidebarInset : NSWidth(a);
         CGFloat width = MIN(ArcEditorMaxWidth, MAX(ArcEditorMinWidth, sidebar * ArcEditorWidthRatio));
-        width = MAX(MIN(width, NSMaxX(host) - NSMinX(a)), NSWidth(a));
+        width = MIN(width, NSMaxX(host) - NSMinX(a));
+        if (self.pinnedToPill) width = MAX(width, NSWidth(a));   // always covers the pill
         return NSMakeRect(NSMinX(a), NSMaxY(a) - height, width, height);
     }
     CGFloat width = MIN(ArcPaletteWidth, NSWidth(a) - 2 * ArcPaletteMargin);
@@ -75,6 +81,7 @@ NSRect TweakCommandBarContentRect(NSWindow *window) {
     CGFloat height = m.inputHeight + line + listH;
     NSRect frame = [self panelFrameForHeight:height];
     [self.panel setFrame:frame display:YES];
+    [self.panel invalidateShadow];   // the shadow follows the rounded panel as rows come and go
     CGFloat width = NSWidth(frame), mid = height - m.inputHeight / 2;
 
     CGFloat iconX = m.editor ? ArcSpace3 : ArcPaletteSearchInset;
@@ -109,7 +116,16 @@ NSRect TweakCommandBarContentRect(NSWindow *window) {
         grow.timingFunction = ArcEaseOut();
         [l addAnimation:grow forKey:@"arcpatches.appear"];
     }
-    ArcAnimate(ArcDurationMedium, YES, ^(NSAnimationContext *ctx) { p.animator.alphaValue = 1; }, nil);
+    fade(p, 1, ArcDurationMedium, ArcEaseOut(), nil);
+}
+
+// Fades run even with Reduce Motion on (only the scale is motion), so not through ArcAnimate.
+static void fade(NSWindow *w, CGFloat alpha, NSTimeInterval duration, CAMediaTimingFunction *timing, void (^done)(void)) {
+    [NSAnimationContext runAnimationGroup:^(NSAnimationContext *ctx) {
+        ctx.duration = duration;
+        ctx.timingFunction = timing;
+        w.animator.alphaValue = alpha;
+    } completionHandler:done];
 }
 
 - (void)fadeOut {
@@ -118,7 +134,7 @@ NSRect TweakCommandBarContentRect(NSWindow *window) {
     NSUInteger generation = self.showGeneration;
     p.ignoresMouseEvents = YES;   // a click during the fade reaches the page, not a dying row
     __weak typeof(self) weakSelf = self;
-    ArcAnimate(ArcDurationFast, NO, ^(NSAnimationContext *ctx) { p.animator.alphaValue = 0; }, ^{
+    fade(p, 0, ArcDurationFast, ArcEaseIn(), ^{
         if (weakSelf.showGeneration != generation) return;   // shown again meanwhile
         [p orderOut:nil];
         p.alphaValue = 1;

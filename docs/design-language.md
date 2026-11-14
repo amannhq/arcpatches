@@ -25,7 +25,7 @@ The sizes come from measuring Arc 1.x on macOS. Everything is drawn with Apple's
 | Fill | Rest 8%, hover 11%, pressed 16%, selected 14%, tile 7% | White on dark chrome, black on light (about 60% of the dark alpha) |
 | Icon colour | Secondary label, or tertiary when disabled | Never full-contrast labels in chrome |
 | Panel colour | Tertiary text (white 58% / black 64%), panel tint (94% wash over the blur), panel border (white 12% / black 10%), text selection (white 24% / black 14%) | Tertiary is tuned to ~6:1 because the system tertiary label reads ~2:1 on the palette. The tint keeps the palette dark over white pages |
-| Palette (⌘T) | Width 520 (content width − 2 × margin 24 at most), top at 30% of the web content, search row 52 with a 15-pt magnifying glass at 18, rows 34 with 6 gaps inside an 8 inset, appears from scale 0.98 | Centred over the web content, not the window |
+| Palette (⌘T) | Width 520 (content width − 2 × margin 24 at most), top at 30% of the web content, search row 52 with a 15-pt magnifying glass at 18, rows 34 with 6 gaps inside an 8 inset (a title takes at most 60% of a row that also shows a "— detail"), appears from scale 0.98 | Centred over the web content, not the window |
 | URL editor (⌘L) | Width 1.55 × sidebar width, clamped to 300–420 and the window, rows 44, Dia's editor popover offset 0 from the pill | Its top-left sits on the pill's top-left, covering it |
 | Motion | Fast 0.12 s (hover), medium 0.2 s (appear and crossfade), "Copied" held 1.2 s | Ease-out when appearing, ease-in when leaving. Instant when Reduce Motion is on (`ArcAnimate`) |
 
