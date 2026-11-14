@@ -81,3 +81,6 @@ extern NSString *const kDiaAIServiceClass;
 
 extern NSString *const kDiaSiteControlsIdentifier;       // accessibility id of the bar's site control center button
 extern NSString *const kDiaSiteDetailsURLPrefix;         // + percent-encoded origin: Chromium's per-site settings
+extern NSString *const kDiaPinnedExtensionsViewClass;    // the bar's pinned extensions (one view per extension inside)
+extern NSString *const kDiaCaptureScreenshotAction;      // selector of Dia's screenshot menu item, if it has one
+extern NSString *const kDiaExtensionDetailsURLPrefix;    // + extension id: Chromium's extension details page

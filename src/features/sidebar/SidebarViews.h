@@ -33,4 +33,4 @@ NSColor *TweakPillFill(CGFloat darkAlpha, CGFloat lightAlpha);
 
 BOOL TweakSidebarURLIsSite(NSString *url);         // http(s) with a host: has site controls
 BOOL TweakSidebarCopyURL(NSWindow *window);        // the active tab's URL to the pasteboard
-void TweakSidebarOpenSiteControls(NSWindow *window);   // Dia's site control center, else Chromium's site settings
+void TweakSidebarOpenSiteControls(NSView *anchor);   // the site controls popover under anchor (SiteControlsPopover.m)

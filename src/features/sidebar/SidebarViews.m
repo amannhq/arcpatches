@@ -158,7 +158,7 @@ NSColor *TweakPillFill(CGFloat darkAlpha, CGFloat lightAlpha) {
     });
 }
 
-- (void)siteControls:(id)sender { TweakSidebarOpenSiteControls(self.window); }
+- (void)siteControls:(id)sender { TweakSidebarOpenSiteControls(sender); }
 
 @end
 
