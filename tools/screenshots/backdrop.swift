@@ -146,7 +146,7 @@ func frost(_ img: CGImage, sigma: CGFloat) -> CGImage {
 
 /// Rounds every channel of an RGBX context to a multiple of 4: invisible (blur, shadows and
 /// text edges move by at most 2/255), and it makes the finished PNGs about a third smaller.
-func posterise(_ ctx: CGContext) {
+func posterise(_ ctx: CGContext, step: Int = 4) {
     let p = ctx.data!.assumingMemoryBound(to: UInt8.self)
-    for i in 0..<(ctx.bytesPerRow * ctx.height) where i & 3 != 3 { p[i] = UInt8(min(252, (Int(p[i]) + 2) & ~3)) }
+    for i in 0..<(ctx.bytesPerRow * ctx.height) where i & 3 != 3 { p[i] = UInt8(min(256 - step, (Int(p[i]) + step / 2) / step * step)) }
 }

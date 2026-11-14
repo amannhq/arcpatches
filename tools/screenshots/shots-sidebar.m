@@ -23,53 +23,80 @@ static NSView *sidebarCard(CGFloat height) { return ShotCard(NSMakeSize(kWidth, 
 
 #pragma mark - Top row
 
-static void addTopRow(NSView *parent, CGFloat y) {
-    // Window buttons: plain macOS circles, where the system draws them.
-    NSArray *colors = @[[NSColor colorWithSRGBRed:1 green:0.37 blue:0.34 alpha:1], [NSColor colorWithSRGBRed:1 green:0.74 blue:0.18 alpha:1],
+// Window buttons: plain macOS circles, where the system draws them. Minimize is grey when disabled.
+void ShotAddWindowButtons(NSView *parent, CGFloat x, CGFloat midY, CGFloat spacing, BOOL minimize) {
+    NSArray *colors = @[[NSColor colorWithSRGBRed:1 green:0.37 blue:0.34 alpha:1],
+                        minimize ? [NSColor colorWithSRGBRed:1 green:0.74 blue:0.18 alpha:1] : [NSColor colorWithWhite:0.45 alpha:1],
                         [NSColor colorWithSRGBRed:0.16 green:0.79 blue:0.25 alpha:1]];
     for (NSUInteger i = 0; i < colors.count; i++) {
-        NSBox *dot = [[NSBox alloc] initWithFrame:NSMakeRect(14 + i * 20, y + kRowH / 2 - 6, 12, 12)];
+        NSBox *dot = [[NSBox alloc] initWithFrame:NSMakeRect(x + i * spacing, midY - 6, 12, 12)];
         dot.boxType = NSBoxCustom; dot.borderWidth = 0; dot.cornerRadius = 6; dot.fillColor = colors[i];
         [parent addSubview:dot];
     }
-    NSButton *toggle = [NSClassFromString(@"TweakSidebarToggleButton") toggle];
-    toggle.frame = NSMakeRect(70 + 1, y + (kRowH - TweakChromeTopRowSize) / 2, TweakChromeTopRowSize, TweakChromeTopRowSize);
-    [parent addSubview:toggle];
+}
 
-    CGFloat w = 3 * TweakChromeTopRowSize;   // placed as Sidebar.m does: trailing, 8 from the edge
-    TweakNavButtons *nav = [[TweakNavButtons alloc] initWithFrame:NSMakeRect(kWidth - w - 8, y + (kRowH - TweakChromeTopRowSize) / 2, w, TweakChromeTopRowSize)];
+const ShotTopRowOptions ShotTopRowDefault = {YES, YES, YES, NO};
+
+// Placed as TopRow.m and Sidebar.m do: the toggle after the window buttons (or at the inset
+// without them), the nav buttons trailing, 8 from the edge. Returns the nav buttons, if any.
+TweakNavButtons *ShotAddTopRow(NSView *parent, CGFloat y, ShotTopRowOptions o) {
+    CGFloat width = NSWidth(parent.bounds), mid = y + kRowH / 2, s = TweakChromeTopRowSize;
+    if (o.lights) ShotAddWindowButtons(parent, 14, mid, 20, YES);
+    CGFloat x = o.lights ? 71 : ArcSidebarInset;
+    if (o.toggle) {
+        NSButton *toggle = [NSClassFromString(@"TweakSidebarToggleButton") toggle];
+        toggle.frame = NSMakeRect(x, round(mid - s / 2), s, s);
+        [parent addSubview:toggle];
+        x += s + ArcSpace1;
+    }
+    if (o.profile) {   // Dia's profile name, as its sidebar header shows it
+        NSTextField *name = [NSTextField labelWithString:@"Personal"];
+        name.font = [NSFont systemFontOfSize:13 weight:NSFontWeightMedium];
+        name.textColor = ArcTextSecondary();
+        [name sizeToFit];
+        name.frameOrigin = NSMakePoint(x + ArcSpace1, round(mid - NSHeight(name.frame) / 2));
+        [parent addSubview:name];
+    }
+    if (!o.nav) return nil;
+    CGFloat w = 3 * s;
+    TweakNavButtons *nav = [[TweakNavButtons alloc] initWithFrame:NSMakeRect(width - w - 8, round(mid - s / 2), w, s)];
     [parent addSubview:nav];
     [nav layoutSubtreeIfNeeded];
     ((NSButton *)nav.subviews[1]).enabled = NO;   // no forward history: dimmed, still in place
+    return nav;
 }
+
+static void addTopRow(NSView *parent, CGFloat y) { ShotAddTopRow(parent, y, ShotTopRowDefault); }
 
 #pragma mark - URL pill
 
-typedef NS_ENUM(NSInteger, ShotPillState) { ShotPillRest, ShotPillHover, ShotPillEmpty };
-
-static TweakSidebarURLBar *pill(ShotPillState state, CGFloat y) {
+TweakSidebarURLBar *ShotPill(ShotPillState state, CGFloat y, NSString *label, BOOL buttons) {
     TweakSidebarURLBar *bar = [[TweakSidebarURLBar alloc] initWithFrame:NSMakeRect(0, y, kWidth, kPillRowH)];
     bar.appearance = [NSAppearance appearanceNamed:NSAppearanceNameDarkAqua];
     // Set directly: -refresh would ask a browser window for its URL.
     if (state != ShotPillEmpty) {
         bar.currentURL = @"https://nextjs.org/docs";
-        bar.label.stringValue = @"nextjs.org";
+        bar.label.stringValue = label ?: @"nextjs.org";
     }
     bar.hovering = state == ShotPillHover;
     [bar updateAppearance:NO];
     for (NSButton *b in @[bar.linkButton, bar.siteButton]) {   // finish the hover fade now
-        BOOL shown = state == ShotPillHover;
+        BOOL shown = state == ShotPillHover && buttons;
         b.hidden = !shown;
         b.alphaValue = shown ? 1 : 0;
     }
     bar.needsLayout = YES;
     [bar layoutSubtreeIfNeeded];
+    if (!buttons) bar.label.frameSize = NSMakeSize(NSWidth(bar.pill.frame) - 2 * NSMinX(bar.label.frame), NSHeight(bar.label.frame));
     return bar;
 }
 
+static TweakSidebarURLBar *pill(ShotPillState state, CGFloat y) { return ShotPill(state, y, nil, YES); }
+
+
 #pragma mark - Favourites and tabs
 
-static void addFavourites(NSView *parent, CGFloat y) {
+void ShotAddFavourites(NSView *parent, CGFloat y) {
     NSArray *sites = @[@"github.com", @"youtube.com", @"mail.google.com", @"figma.com",
                        @"notion.so", @"slack.com", @"linear.app", @"wikipedia.org"];
     CGFloat inset = ArcSidebarInset, gap = ArcSpace2, h = 44;
@@ -131,7 +158,7 @@ void ShotSidebar(NSString *dir) {
     y += kRowH + 4;
     [sidebar addSubview:pill(ShotPillHover, y)];
     y += kPillRowH + 10;
-    addFavourites(sidebar, y);
+    ShotAddFavourites(sidebar, y);
     y += 2 * 44 + ArcSpace2 + 14;
     NSBox *line = [[NSBox alloc] initWithFrame:NSMakeRect(ArcSidebarInset + 6, y, kWidth - 2 * (ArcSidebarInset + 6), 1)];
     line.boxType = NSBoxCustom; line.borderWidth = 0; line.fillColor = ArcHairline();

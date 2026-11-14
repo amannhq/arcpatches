@@ -10,10 +10,11 @@
 //   mkdir -p build && clang -fobjc-arc -framework AppKit -framework QuartzCore -lsqlite3 -Isrc/core -Isrc/browsers/dia \
 //     tools/screenshots/shots*.m $(find src -name '*.m' ! -name ArcPatches.m ! -name SiteControlsData.m) \
 //     -o build/shots && build/shots build/shots-raw
-//   swiftc -O -parse-as-library tools/screenshots/frame.swift tools/screenshots/backdrop.swift -o build/frame \
-//     && build/frame build/shots-raw docs/screenshots
+//   swiftc -O -parse-as-library tools/screenshots/frame.swift tools/screenshots/frame-settings.swift \
+//     tools/screenshots/backdrop.swift -o build/frame && build/frame build/shots-raw docs/screenshots
 //
-// Raw output: palette.png, editor.png, settings.png, plus shots-sidebar.m's renders.
+// Raw output: palette.png, editor.png, settings.png, shots-sidebar.m's renders, and settings/
+// (shots-settings.m) and anim/ (shots-anim.m) for the website's per-setting examples.
 #import "shots.h"
 #import "../../src/features/commandbar/CommandBarInternal.h"
 
@@ -170,7 +171,7 @@ static NSView *commandBar(BOOL editor, CGFloat width, NSString *typed, NSString 
     return panel;
 }
 
-static void palette(NSString *dir) {
+NSView *ShotPalette(NSInteger highlighted, NSInteger rows) {
     NSArray *items = @[
         item(TweakItemTab, @"Next.js Docs", @"Switch to Tab", @"https://nextjs.org/docs", @"square.on.square"),
         item(TweakItemHistory, @"vercel/next.js", nil, @"https://github.com/vercel/next.js", @"globe"),
@@ -179,11 +180,14 @@ static void palette(NSString *dir) {
         item(TweakItemPage, @"Downloads", nil, @"chrome://downloads", @"arrow.down.circle"),
         item(TweakItemHistory, @"Next steps", nil, @"https://developer.apple.com/tutorials/swiftui", @"globe"),
     ];
-    NSView *bar = commandBar(NO, 640, @"next", @"js.org", nil, items);
-    ShotWritePNG(bar, [dir stringByAppendingPathComponent:@"palette.png"]);
+    NSView *bar = commandBar(NO, 640, @"next", @"js.org", nil, [items subarrayWithRange:NSMakeRange(0, MIN(rows, items.count))]);
+    ((TweakResultsView *)bar.subviews.lastObject).selected = highlighted;
+    return bar;
 }
 
-static void editor(NSString *dir) {
+static void palette(NSString *dir) { ShotWritePNG(ShotPalette(0, 6), [dir stringByAppendingPathComponent:@"palette.png"]); }
+
+NSView *ShotEditor(void) {
     NSArray *items = @[
         item(TweakItemHistory, @"Next.js Docs", nil, @"https://nextjs.org/docs", @"globe"),
         item(TweakItemHistory, @"nextjs.org", nil, @"https://nextjs.org/", @"globe"),
@@ -192,9 +196,10 @@ static void editor(NSString *dir) {
         item(TweakItemHistory, @"Next.js Blog", nil, @"https://nextjs.org/blog", @"globe"),
     ];
     CGFloat width = MIN(ArcEditorMaxWidth, MAX(ArcEditorMinWidth, 240 * ArcEditorWidthRatio));   // from a 240-pt sidebar
-    NSView *bar = commandBar(YES, width, @"", @"https://nextjs.org/docs", ShotSiteIcon(@"nextjs.org", ArcFaviconSize), items);
-    ShotWritePNG(bar, [dir stringByAppendingPathComponent:@"editor.png"]);
+    return commandBar(YES, width, @"", @"https://nextjs.org/docs", ShotSiteIcon(@"nextjs.org", ArcFaviconSize), items);
 }
+
+static void editor(NSString *dir) { ShotWritePNG(ShotEditor(), [dir stringByAppendingPathComponent:@"editor.png"]); }
 
 #pragma mark - Settings pane
 
@@ -221,6 +226,8 @@ int main(int argc, char **argv) {
             settings(dir);
             ShotSidebar(dir);
             ShotSiteControls(dir);
+            ShotSettings([dir stringByAppendingPathComponent:@"settings"]);
+            ShotAnimations([dir stringByAppendingPathComponent:@"anim"]);
         }];
         printf("wrote renders to %s\n", dir.UTF8String);
     }

@@ -1,8 +1,10 @@
 // Dev tool: places shots.m's renders, as glass panels, on backdrop.swift's poster art.
-//   swiftc -O -parse-as-library tools/screenshots/frame.swift tools/screenshots/backdrop.swift -o build/frame
+//   swiftc -O -parse-as-library tools/screenshots/frame.swift tools/screenshots/frame-settings.swift \
+//     tools/screenshots/backdrop.swift -o build/frame
 //   build/frame <raw-dir> <out-dir>
 // Reads the 2x renders in <raw-dir>; writes hero, sidebar, pill-hover, site-controls,
-// palette and editor PNGs (2x, opaque RGB) to <out-dir>.
+// palette and editor PNGs (2x, opaque RGB) to <out-dir>, and the website's per-setting
+// stills and animations to <out-dir>/settings (frame-settings.swift).
 import AppKit
 import CoreImage
 import ImageIO
@@ -16,11 +18,13 @@ struct Canvas {
 
     init(pixels w: Int, _ h: Int, scene: Scene) {
         backdrop = makeBackdrop(width: w, height: h, scene: scene)
-        frosted = frost(backdrop, sigma: 72)   // ~36 pt at 2x
+        frosted = frost(backdrop, sigma: 36 * scale)   // ~36 pt
     }
 }
 
 var canvas: Canvas!
+var scale: CGFloat = 2   // output pixels per point
+var posterStep = 4       // see posterise()
 var raw: URL!, out: URL!
 
 func load(_ name: String) -> NSImage {
@@ -32,16 +36,23 @@ func load(_ name: String) -> NSImage {
 
 /// A glass panel: shadow, the frosted backdrop clipped to the panel, an optional tint,
 /// `content`, then a 1-px inner highlight.
-func glass(_ frame: NSRect, radius: CGFloat, tint: NSColor? = nil, _ content: () -> Void) {
+/// `alpha` and `zoom` (about the centre) apply to the whole panel, as when it appears.
+func glass(_ frame: NSRect, radius: CGFloat, tint: NSColor? = nil, alpha: CGFloat = 1, zoom: CGFloat = 1, _ content: () -> Void) {
     let shape = NSBezierPath(roundedRect: frame, xRadius: radius, yRadius: radius)
     let cg = NSGraphicsContext.current!.cgContext
+    if alpha <= 0 { return }
+    cg.saveGState()
+    defer { cg.endTransparencyLayer(); cg.restoreGState() }
+    cg.translateBy(x: frame.midX, y: frame.midY); cg.scaleBy(x: zoom, y: zoom); cg.translateBy(x: -frame.midX, y: -frame.midY)
+    cg.setAlpha(alpha)
+    cg.beginTransparencyLayer(auxiliaryInfo: nil)
     NSGraphicsContext.saveGraphicsState()
     let sh = NSShadow(); sh.shadowColor = rgb(0.02, 0.05, 0.07, 0.6); sh.shadowBlurRadius = 44; sh.shadowOffset = NSSize(width: 0, height: -20); sh.set()
     rgb(0.05, 0.06, 0.07).setFill(); shape.fill()
     NSGraphicsContext.restoreGraphicsState()
     NSGraphicsContext.saveGraphicsState()
     shape.addClip()
-    let full = NSRect(x: 0, y: 0, width: CGFloat(canvas.frosted.width) / 2, height: CGFloat(canvas.frosted.height) / 2)
+    let full = NSRect(x: 0, y: 0, width: CGFloat(canvas.frosted.width) / scale, height: CGFloat(canvas.frosted.height) / scale)
     cg.draw(canvas.frosted, in: full)
     if let tint { tint.setFill(); frame.fill(using: .sourceOver) }
     content()
@@ -51,9 +62,9 @@ func glass(_ frame: NSRect, radius: CGFloat, tint: NSColor? = nil, _ content: ()
 }
 
 /// A render as a glass panel; the render carries its own translucent tint.
-func panel(_ img: NSImage, at origin: NSPoint, radius: CGFloat = 14) {
+func panel(_ img: NSImage, at origin: NSPoint, radius: CGFloat = 14, alpha: CGFloat = 1, zoom: CGFloat = 1) {
     let frame = NSRect(origin: origin, size: img.size)
-    glass(frame, radius: radius) { img.draw(in: frame) }
+    glass(frame, radius: radius, alpha: alpha, zoom: zoom) { img.draw(in: frame) }
 }
 
 func caption(_ text: String, at p: NSPoint) {
@@ -61,21 +72,27 @@ func caption(_ text: String, at p: NSPoint) {
     (text as NSString).draw(at: p, withAttributes: a)
 }
 
-func render(size: NSSize, to name: String, scene: Scene, _ draw: (NSRect) -> Void) {
-    let w = Int(size.width * 2), h = Int(size.height * 2)
-    canvas = Canvas(pixels: w, h, scene: scene)
+/// Draws over the current canvas's backdrop, `size` points at `scale`; posterised.
+func compose(size: NSSize, _ draw: (NSRect) -> Void) -> CGImage {
+    let w = Int(size.width * scale), h = Int(size.height * scale)
     let cg = CGContext(data: nil, width: w, height: h, bitsPerComponent: 8, bytesPerRow: 0,
                        space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue)!
     cg.draw(canvas.backdrop, in: CGRect(x: 0, y: 0, width: w, height: h))
-    cg.scaleBy(x: 2, y: 2)
+    cg.scaleBy(x: scale, y: scale)
     NSGraphicsContext.saveGraphicsState()
     NSGraphicsContext.current = NSGraphicsContext(cgContext: cg, flipped: false)
     draw(NSRect(origin: .zero, size: size))
     NSGraphicsContext.restoreGraphicsState()
+    posterise(cg, step: posterStep)
+    return cg.makeImage()!
+}
+
+func render(size: NSSize, to name: String, scene: Scene, _ draw: (NSRect) -> Void) {
+    canvas = Canvas(pixels: Int(size.width * scale), Int(size.height * scale), scene: scene)
     let url = out.appendingPathComponent(name)
     let dest = CGImageDestinationCreateWithURL(url as CFURL, UTType.png.identifier as CFString, 1, nil)!
-    posterise(cg)
-    CGImageDestinationAddImage(dest, cg.makeImage()!, [kCGImagePropertyDPIWidth: 144, kCGImagePropertyDPIHeight: 144] as CFDictionary)
+    let dpi = 72 * scale
+    CGImageDestinationAddImage(dest, compose(size: size, draw), [kCGImagePropertyDPIWidth: dpi, kCGImagePropertyDPIHeight: dpi] as CFDictionary)
     CGImageDestinationFinalize(dest)
     print("wrote", url.path)
 }
@@ -109,6 +126,8 @@ struct Frame {
         single("site-controls.png", scene: Scene(seed: 5, sun: (0.25, 0.20, 0.14)))
         single("palette.png", scene: Scene(seed: 41, sun: (0.15, 0.34, 0.26)))
         single("editor.png", scene: Scene(seed: 8, sun: (0.84, 0.30, 0.22)))
+
+        frameSettings()
 
         // 3. The URL pill at rest, under the pointer, and with no page open, on one glass strip.
         let states = [("At rest", load("pill-rest.png")), ("Hover: copy link and site controls", load("pill-hover.png")),
