@@ -170,8 +170,10 @@ static void placeToggle(NSView *header, NSView *buttons) {
     BOOL shown = buttons && !buttons.isHiddenOrHasHiddenAncestor && NSWidth(bf) > 1;
     if (shown) objc_setAssociatedObject(header, kInsetKey, @(NSMinX(bf)), OBJC_ASSOCIATION_RETAIN);
     NSNumber *inset = objc_getAssociatedObject(header, kInsetKey);
+    // In full screen the toggle starts the row, its hover square on the URL pill's edge.
     CGFloat x = shown ? NSMaxX(bf) + kGap
-              : (!buttons && !isFullScreen(header.window)) ? kWindowButtonsEnd
+              : isFullScreen(header.window) ? ArcSidebarInset
+              : !buttons ? kWindowButtonsEnd
               : (inset ? inset.doubleValue : kLeadingInset);
 
     // Vertically centred like the nav buttons: on the header's own first subview.
@@ -190,15 +192,11 @@ static void applyHeader(NSView *header) {
     NSView *buttons = TweakDescendantOfClass(header, kDiaWindowStandardButtonsClass);
     BOOL full = isFullScreen(header.window);
     TweakTopRowSetMinimizeAllowed(header.window, !full);
-    if (buttons) {
-        // In full screen they wait out of sight until the pointer reaches the top row.
-        TweakTopRowTrackHeader(header, ^(NSView *h) { applyHeader(h); h.needsLayout = YES; });
-        BOOL hide = full && [TweakSettings boolForKey:TweakKeyHideWindowButtonsInFullScreen] && !TweakTopRowHeaderHovered(header);
-        BOOL wasHidden = hidByUs(buttons);
-        applyWindowButtons(buttons, hide);
-        if (full && wasHidden && !hidByUs(buttons)) TweakTopRowFadeIn(buttons);
-        else if (!full && buttons.alphaValue < 1) buttons.alphaValue = 1;
-    }
+    // In full screen they live in the title strip that slides down from the top edge
+    // (FullScreenButtons.m), never in this row: as in Arc.
+    BOOL strip = full && [TweakSettings boolForKey:TweakKeyHideWindowButtonsInFullScreen];
+    TweakFullScreenStripSetActive(header.window, strip);
+    if (buttons) applyWindowButtons(buttons, strip);
     placeToggle(header, buttons);
     applyProfileName(header);
     gApplying = NO;

@@ -31,6 +31,9 @@ static const CGFloat ArcPillIcon = 13;
 static const CGFloat ArcPopoverWidth = 272;
 static const CGFloat ArcTileHeight = 34;         // popover action / extension tiles
 static const CGFloat ArcRowIconCircle = 30;      // popover settings rows
+static const CGFloat ArcFullScreenStripHeight = 32;   // the title strip that slides down in full screen
+static const CGFloat ArcFullScreenStripInset = 13;    // first window button's leading edge in it
+static const CGFloat ArcFullScreenStripSpacing = 20;  // between window buttons (macOS spacing)
 static const CGFloat ArcFaviconSize = 18;        // site icons in lists and fields
 static const CGFloat ArcChipSize = 26;           // rounded square behind a row's action icon
 

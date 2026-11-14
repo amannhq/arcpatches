@@ -13,6 +13,7 @@ NSColor *TweakPillFill(CGFloat darkAlpha, CGFloat lightAlpha);
 @interface TweakSidebarURLBar : NSView
 @property (nonatomic, strong) NSView *pill;
 @property (nonatomic, strong) NSTextField *label;
+@property (nonatomic, strong) NSImageView *searchIcon;   // empty state: no page open
 @property (nonatomic, strong) TweakPillIconButton *linkButton;    // copy link (hover)
 @property (nonatomic, strong) TweakPillIconButton *siteButton;   // site controls (hover); `selected` while its popover is open
 @property (nonatomic, copy) NSString *currentURL;

@@ -35,9 +35,15 @@ NSColor *TweakPillFill(CGFloat darkAlpha, CGFloat lightAlpha) {
     _label.font = ArcFontURL();
     _label.textColor = ArcTextSecondary();
     _label.lineBreakMode = NSLineBreakByTruncatingTail;
-    _label.placeholderString = @"Search or enter URL";
+    _label.placeholderString = @"Search or Enter URL...";   // Arc's empty-state wording
     _label.wantsLayer = YES;   // for the "Copied" crossfade
     [_pill addSubview:_label];
+
+    // Arc's empty state: a magnifying glass before the placeholder when no page is open.
+    _searchIcon = [NSImageView imageViewWithImage:ArcSymbol(@"magnifyingglass", ArcPillIcon, NSFontWeightMedium, @"Search")];
+    _searchIcon.contentTintColor = ArcTextSecondary();
+    _searchIcon.hidden = YES;
+    [_pill addSubview:_searchIcon];
 
     _linkButton = [TweakPillIconButton buttonWithSymbol:@"link" label:@"Copy Link" target:self action:@selector(copyLink:)];
     _siteButton = [TweakPillIconButton buttonWithSymbol:@"slider.horizontal.2.square" label:@"Site Controls" target:self action:@selector(siteControls:)];
@@ -71,7 +77,15 @@ NSColor *TweakPillFill(CGFloat darkAlpha, CGFloat lightAlpha) {
         right -= kButtonGap;
     }
     CGFloat fh = ceil(self.label.cell.cellSize.height) ?: 17;
-    self.label.frame = NSMakeRect(kTextInset, round((h - fh) / 2), MAX(0, textEnd - kTextInset), fh);
+    BOOL empty = !self.label.stringValue.length && !self.showingFeedback;
+    if (self.searchIcon.hidden == empty) self.searchIcon.hidden = !empty;
+    CGFloat textX = kTextInset;
+    if (empty) {
+        NSSize s = self.searchIcon.intrinsicContentSize;
+        self.searchIcon.frame = NSMakeRect(kTextInset, round((h - s.height) / 2), s.width, s.height);
+        textX = kTextInset + s.width + ArcSpace2;
+    }
+    self.label.frame = NSMakeRect(textX, round((h - fh) / 2), MAX(0, textEnd - textX), fh);
 }
 
 - (void)updateTrackingAreas {
@@ -140,6 +154,7 @@ NSColor *TweakPillFill(CGFloat darkAlpha, CGFloat lightAlpha) {
         // Dev servers and local services differ only by port: "localhost:3000", not "localhost".
         if (!TweakSettings.sidebarShowsFullURL && host.length && url.port) text = [text stringByAppendingFormat:@":%@", url.port];
     }
+    if (!text.length != !self.label.stringValue.length) self.needsLayout = YES;   // empty state on/off
     self.label.stringValue = text;
     [self updateButtons];
 }
