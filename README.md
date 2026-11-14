@@ -24,6 +24,7 @@ It does this by patching your own copy of the browser on your Mac. Nothing of th
 | | |
 | --- | --- |
 | **Sidebar URL bar** | The current site sits at the top of the sidebar, with back, forward and reload beside the window buttons. Hovering shows copy-link and site-controls buttons. |
+| **Arc top row** | A sidebar toggle follows the window buttons. In full screen the window buttons disappear and the row starts with the toggle. |
 | **Full-window pages** | The top toolbar is hidden, so pages use the whole window. Hover the top edge to bring the toolbar back. |
 | **Command bar** | `⌘T`, `⌘L` or a click on the URL opens it. It searches open tabs, history and bookmarks, runs browser commands, opens `chrome://` pages, and completes sites as you type. |
 | **Arc shortcuts** | `⌘S` toggles the sidebar, `⌘⇧C` copies a clean URL, `⌘⇧⌥C` copies a Markdown link. Each one can be turned off. |

@@ -17,6 +17,8 @@ NSString *const kDiaGesturalContentClass = @"GesturalNavigation.GesturalNavigati
 NSString *const kDiaInfoBarClass = @"InfoBar.InfoBarStackView";
 NSString *const kDiaWebContentsHostClass = @"WebContentsPaneHostView";
 NSString *const kDiaFlippedViewClass = @"ARCUI.FlippedView";
+NSString *const kDiaWindowStandardButtonsClass = @"ARCUI.WindowStandardButtons";
+NSString *const kDiaToggleSidebarAction = @"toggleSidebar:";
 
 NSString *const kDiaNavigationBarClass = @"NavigationBar.NavigationBarView";
 NSString *const kDiaNavigationCapsuleButtonClass = @"NavigationBar.NavigationBarCapsuleButton";

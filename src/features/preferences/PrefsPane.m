@@ -39,6 +39,10 @@
         [self rowWithTitle:@"Copy link and site controls" detail:@"Buttons that appear in the URL bar when the pointer is over it." control:[self switchForKey:TweakKeySidebarPillButtons] key:TweakKeySidebarPillButtons],
         [self rowWithTitle:@"Top bar while the sidebar is hidden" detail:@"Shows Dia's bar when the sidebar is collapsed, as in focus mode. Off, like Arc: no URL bar until the sidebar is back." control:[self switchForKey:TweakKeyTopBarWhenSidebarHidden] key:TweakKeyTopBarWhenSidebarHidden],
     ]];
+    NSView *topRowGroup = [self groupWithRows:@[
+        [self rowWithTitle:@"Sidebar toggle button" detail:@"Shown after the window controls; hides and shows the sidebar with Dia's own command." control:[self switchForKey:TweakKeySidebarToggleButton] key:TweakKeySidebarToggleButton],
+        [self rowWithTitle:@"Hide window buttons in full screen" detail:@"The sidebar's top row then starts with the toggle, as in Arc." control:[self switchForKey:TweakKeyHideWindowButtonsInFullScreen] key:TweakKeyHideWindowButtonsInFullScreen],
+    ]];
     _recorders = [NSMutableArray array];
     NSMutableArray *shortcutRows = [NSMutableArray arrayWithObject:
         [self rowWithTitle:@"Extra shortcuts" detail:@"Keys for tidying tabs and switching profiles. Click a shortcut to change it." control:[self switchForKey:TweakKeyExtraShortcuts] key:TweakKeyExtraShortcuts]];
@@ -89,6 +93,7 @@
     NSStackView *stack = [NSStackView stackViewWithViews:@[
         [self label:@"URL bar" size:13 weight:NSFontWeightSemibold color:NSColor.labelColor], urlGroup,
         [self label:@"Sidebar URL bar" size:13 weight:NSFontWeightSemibold color:NSColor.labelColor], sidebarGroup,
+        [self label:@"Sidebar top row" size:13 weight:NSFontWeightSemibold color:NSColor.labelColor], topRowGroup,
         [self label:@"Shortcuts" size:13 weight:NSFontWeightSemibold color:NSColor.labelColor], shortcutsGroup,
         [self label:@"Privacy" size:13 weight:NSFontWeightSemibold color:NSColor.labelColor], privacyGroup, _blockedLabel,
         [self label:@"Performance" size:13 weight:NSFontWeightSemibold color:NSColor.labelColor], perfGroup, perfNote,
@@ -100,6 +105,7 @@
     [stack setCustomSpacing:20 afterView:urlGroup];
     [stack setCustomSpacing:20 afterView:sidebarGroup];
     [stack setCustomSpacing:20 afterView:shortcutsGroup];
+    [stack setCustomSpacing:20 afterView:topRowGroup];
     [stack setCustomSpacing:20 afterView:_blockedLabel];
     [stack setCustomSpacing:14 afterView:perfNote];
     stack.translatesAutoresizingMaskIntoConstraints = NO;
@@ -125,6 +131,7 @@
         [shortcutsGroup.widthAnchor constraintEqualToAnchor:stack.widthAnchor],
         [privacyGroup.widthAnchor constraintEqualToAnchor:stack.widthAnchor],
         [perfGroup.widthAnchor constraintEqualToAnchor:stack.widthAnchor],
+        [topRowGroup.widthAnchor constraintEqualToAnchor:stack.widthAnchor],
         [footer.widthAnchor constraintEqualToAnchor:stack.widthAnchor],
     ]];
 

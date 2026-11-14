@@ -39,6 +39,8 @@ extern NSString *const TweakKeyNewTabPalette;
 extern NSString *const TweakKeyCommandBarStyle;
 extern NSString *const TweakKeyExtraShortcuts;
 extern NSString *const TweakKeyProfileNumberMods;
+extern NSString *const TweakKeyHideWindowButtonsInFullScreen;   // TopRow.m
+extern NSString *const TweakKeySidebarToggleButton;
 
 typedef NS_ENUM(NSInteger, TweakCommandBarStyle) {
     TweakCommandBarStyleOff = 0,       // Dia's defaults
